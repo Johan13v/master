@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.chart-container {
+    margin-bottom: 2rem;
+}
+
+canvas {
+    width: 100% !important;
+    max-width: 100%;
+}
