@@ -8,6 +8,7 @@ use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\RevenueStreamController;
+use App\Http\Controllers\CommentController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -34,5 +35,22 @@ Route::post('revenue-streams/{revenueStream}/import', [ImportController::class, 
 Route::post('revenue-streams/{revenueStream}/import/update-matchers', [ImportController::class, 'updateMatchers'])->name('imports.updateMatchers');
 Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
 
+
+Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);
+Route::post('/comments/{comment}/translate-sync', [CommentController::class, 'translateAndSync']);
+Route::get('/comments/translate', [CommentController::class, 'translate']);
+
+
+Route::get('/comments', [CommentController::class, 'index'])->name('comments.index');
+Route::get('/comments/{comment}', [CommentController::class, 'show'])->name('comments.show');
+Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+Route::put('/comments/{comment}/translate', [CommentController::class, 'submitTranslation'])->name('comments.submitTranslation');
+Route::put('/comments/{comment}/submitTranslatedReply', [CommentController::class, 'submitTranslatedReply'])->name('comments.submitTranslatedReply');
+
+
+Route::post('/comments/', [CommentController::class, 'store'])->name('comments.store');
+
+Route::post('/comments/{comment}/approve', [CommentController::class, 'approve'])->name('comments.approve');
+Route::post('/comments/{comment}/reject', [CommentController::class, 'reject'])->name('comments.reject');
 
 require __DIR__.'/auth.php';

@@ -35,6 +35,14 @@
                             </div>
                             <input type="hidden" name="matchers" id="matchers" value="{{ implode(',', $website->matchers) }}">
                         </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700">Wordpress APP username</label>
+                            <input type="text" name="username" value="{{ $website->username }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700">Wordpress APP password</label>
+                            <input type="text" name="application_password" value="{{ $website->application_password }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        </div>
                         <div>
                             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Update</button>
                         </div>

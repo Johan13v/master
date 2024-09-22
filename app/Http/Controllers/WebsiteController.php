@@ -24,6 +24,7 @@ class WebsiteController extends Controller
             'title' => 'required',
             'website_address' => 'required|url',
             'matchers' => 'nullable|string',
+
         ]);
 
         Website::create([
@@ -46,12 +47,16 @@ class WebsiteController extends Controller
             'title' => 'required',
             'website_address' => 'required|url',
             'matchers' => 'nullable|string',
+            'username' => 'nullable|string',
+            'application_password' => 'nullable|string',
         ]);
 
         $website->update([
             'title' => $request->title,
             'website_address' => $request->website_address,
             'matchers' => explode(',', $request->matchers),
+            'username' => $request->username,
+            'application_password' => $request->application_password,
         ]);
 
         return redirect()->route('websites.index');

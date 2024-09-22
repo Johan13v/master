@@ -13,9 +13,16 @@ class Website extends Model
         'title',
         'website_address',
         'matchers',
+        'username',
+        'application_password',
     ];
 
     protected $casts = [
         'matchers' => 'array',
     ];
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }
