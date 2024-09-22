@@ -36,8 +36,7 @@ class CommentController extends Controller
             if($comment != null) {
                 $sinceDate = $comment->created_at;
             }
-            echo $website->title;
-            echo ($sinceDate);
+
             $this->service->fetchCommentsFromWebsite($website, $sinceDate);
         }
         return response()->json(['message' => 'Comments fetched successfully']);
