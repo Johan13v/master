@@ -53,7 +53,6 @@ class CommentSyncService
 
         // Now that we have all the comments, process and store them
         foreach ($allComments as $commentData) {
-
             // Check if the comment contains the specific alphabet 'подробности'
             if ($commentData['status'] != 'approved') {
                 if($this->isSpam($commentData)) {
@@ -70,6 +69,13 @@ class CommentSyncService
             $existingTranslatedComment = Comment::where('translated_comment_id', $website->id . '_' . $commentData['id'])->first();
 
             if (!$existingComment && !$existingTranslatedComment) {
+                $parent = null;
+
+                if($commentData['parent'] != '' && $commentData['parent'] != '0') {
+                    $parent = Comment::where('reference_id', $website->id . '_' . $commentData['parent'])
+                        ->first();  // Retrieve only the first result
+                    $parent = $parent->id;
+                }
                 $target_post_id = $this->retrievePostId($website, $commentData['post']);
                     // If the comment doesn't exist, save it to the database
                 Comment::create([
@@ -80,7 +86,8 @@ class CommentSyncService
                     'status' => $commentData['status'] == 'approved' ? 'approved' : 'pending',
                     'post_id' => $commentData['post'],
                     'target_post_id' => $target_post_id,
-                    'created_at' => $commentData['date']
+                    'created_at' => $commentData['date'],
+                    'parent_id' => $parent
                 ]);
             }
         }
@@ -99,7 +106,7 @@ class CommentSyncService
             $response = OpenAI::chat()->create([
                 'model' => 'gpt-4-turbo',
                 'messages' => [
-                    ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . "Please keep the html tags"],
+                    ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
                     ['role' => 'user', 'content' => $comment->content],
                 ],
             ]);
@@ -112,24 +119,31 @@ class CommentSyncService
 
     public function generateResponse($website)
     {
-
         $comments = Comment::where('website_id', $website->id)
             ->whereNull('generated_response')
+            ->where('created_at', '>', '2024-09-15')
+            ->whereNull('parent_id')
             ->get();
 
 
         foreach ($comments as $comment) {
+            $checkIfParent =
+                Comment::where('website_id', $website->id)
+                ->where('parent_id', $comment->id)
+                ->count();
 
-            $response = OpenAI::chat()->create([
-                'model' => 'gpt-4-turbo',
-                'messages' => [
-                    ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs."],
-                    ['role' => 'user', 'content' => $comment->content],
-                ],
-            ]);
+            if($checkIfParent == 0) {
+                $response = OpenAI::chat()->create([
+                    'model' => 'gpt-4-turbo',
+                    'messages' => [
+                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs."],
+                        ['role' => 'user', 'content' => $comment->content],
+                    ],
+                ]);
 
-            $comment->generated_response = $response['choices'][0]['message']['content'];
-            $comment->save();
+                $comment->generated_response = $response['choices'][0]['message']['content'];
+                $comment->save();
+            }
         }
     }
 

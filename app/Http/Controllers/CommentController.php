@@ -23,7 +23,11 @@ class CommentController extends Controller
 
         $websites = Website::all();
         foreach ($websites as $website) {
-            $sinceDate = '2024-01-01T00:00:00'; // Example: Fetch comments after January 1, 2024
+            if($website->website_address != 'https://www.wegwijsnaarparijs.nl' && $website->website_address != 'https://www.nachparis.de') {
+                $sinceDate = '2020-01-01T00:00:00'; // Example: Fetch comments after January 1, 2024
+            } else {
+                $sinceDate = '2024-01-01T00:00:00'; // Example: Fetch comments after January 1, 2024
+            }
 
             if($website->application_password == '' || $website->application_password == null){
                 continue;
@@ -58,6 +62,17 @@ class CommentController extends Controller
 
         return response()->json(['message' => 'Comments translated']);
     }
+
+    public function generateResponse()
+    {
+        $websites = Website::all();
+        foreach ($websites as $website) {
+            $this->service->generateResponse($website);
+        }
+
+        return response()->json(['message' => 'Responses generated']);
+    }
+
 
     public function index(Request $request)
     {
@@ -149,9 +164,10 @@ class CommentController extends Controller
         $response = OpenAI::chat()->create([
             'model' => 'gpt-4-turbo',
             'messages' => [
-                ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . ". Please keep the html tags"],
+                ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
                 ['role' => 'user', 'content' => $validatedData['content']],
             ],
+
         ]);
 
         $translated_content = $response['choices'][0]['message']['content'];
@@ -191,7 +207,7 @@ class CommentController extends Controller
         $response = OpenAI::chat()->create([
             'model' => 'gpt-4-turbo',
             'messages' => [
-                ['role' => 'system', 'content' => "Translate the following comment into German. Please keep the html tags"],
+                ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($comment->website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
                 ['role' => 'user', 'content' => $validatedData['content']],
             ],
         ]);

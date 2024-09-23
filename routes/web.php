@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\RevenueStreamController;
 use App\Http\Controllers\CommentController;
+use App\Services\CommentSyncService;
 
 Route::get('/', function () {
     return view('welcome');
@@ -37,7 +38,7 @@ Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('i
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);
-Route::post('/comments/{comment}/translate-sync', [CommentController::class, 'translateAndSync']);
+Route::get('/generate-responses', [CommentController::class, 'generateResponse']);
 Route::get('/comments/translate', [CommentController::class, 'translate']);
 
 
