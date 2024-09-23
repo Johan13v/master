@@ -147,13 +147,22 @@ class CommentController extends Controller
         $parent = Comment::find($validatedData['parent_id']);
         $website = $parent->website;
         $parent_comment_id = str_replace($parent->website->id . '_', '', $parent->reference_id);
+        $post_id = $parent->post_id;
+        $target_post_id = $parent->target_post_id;
+
+        if($parent['original_language'] == 'DE') {
+            $website = $this->getToWebsite($website->website_address);
+            $post_id = $parent->target_post_id;
+            $target_post_id = $parent->post_id;
+            $parent_comment_id = str_replace($website->id . '_', '', $parent['translated_comment_id']);
+        }
 
         $response = Http::withBasicAuth($website->username, $website->application_password)
             ->post("{$website->website_address}/wp-json/wp/v2/comments", [
                 'content' => $validatedData['content'],
-                'author_name' => 'eline',
+                'author_name' => 'Eline',
                 'author_email' => 'eline@wegwijsnaarparijs.nl',
-                'post' => $parent->post_id, // The ID of the post to which the comment is being added
+                'post' => $post_id, // The ID of the post to which the comment is being added
                 'status' => 'approved',
                 'parent' => $parent_comment_id
             ]);
@@ -175,13 +184,14 @@ class CommentController extends Controller
         Comment::create([
             'content' => $validatedData['content'],
             'parent_id' => $validatedData['parent_id'],
-            'website_id' => $parent->website_id,
+            'website_id' => $website->id,
             'translated_content' => $translated_content,
-            'reference_id' => $parent->website_id . '_' . $comment_id,
-            'post_id' => $parent->post_id,
-            'target_post_id' => $parent->target_post_id,
+            'reference_id' => $website->id . '_' . $comment_id,
+            'post_id' => $post_id,
+            'target_post_id' => $target_post_id,
             'status' => 'approved',
-            'author' => 'eline', // Example: use authenticated user as author
+            'author' => 'Eline', // Example: use authenticated user as author
+            'language' => 'NL'
         ]);
 
         return back()->with('success', 'Reply added successfully!');
@@ -255,30 +265,36 @@ class CommentController extends Controller
     }
 
     function submitTranslatedReply(Request $request, Comment $comment) {
+
         // Validate the request
         $validatedData = $request->validate([
             'translated_content' => 'nullable|string',
         ]);
 
-        $parent = Comment::find($comment->parent_id);
+        $parent = $comment->parent;
         $website = $this->getToWebsite($comment->website->website_address);
 
-        // Remove lastname
-        $author = explode(' ', $comment->author);
-        $author = $author[0];
+        $parent_comment_id = str_replace($website->id . '_', '', $parent['translated_comment_id']);
+
+        if ($parent['original_language'] == 'DE') {
+            $parent_comment_id = str_replace($parent->website->id . '_', '', $parent->reference_id);
+        }
 
         $response = Http::withBasicAuth($website->username, $website->application_password)
-            ->post("{$website->website_address}/wp-json/wp/v2/comments", [
-                'content' => $validatedData['translated_content'],
-                'author_name' => $author,
-                'author_email' => 'no-reply@bestaatniet.nl',
-                'post' => $comment->target_post_id, // The ID of the post to which the comment is being added
-                'status' => 'approved',
+        ->post("{$website->website_address}/wp-json/wp/v2/comments", [
+            'content' => $validatedData['translated_content'],
+            'author_name' => 'Eline',
+            'author_email' => 'eline@wegwijsnaarparijs.nl',
+            'post' => $comment->target_post_id, // The ID of the post to which the comment is being added
+            'status' => 'approved',
+            'parent' => $parent_comment_id
+        ]);
 
-            ]);
+        $comment_id = $response->json();
+        $comment_id = $comment_id['id'];
 
-        $translated_comment_id = $response->json();
-        $validatedData['translated_comment_id'] = $translated_comment_id['id'];
+
+        $validatedData['translated_comment_id'] = $comment_id;
 
         // Update the comment
         $comment->update($validatedData);
@@ -311,23 +327,28 @@ class CommentController extends Controller
                 break;
             case 'https://www.azoren-portugal.de':
                 $website = Website::where('website_address', 'https://www.de-azoren.nl')
-                    ->get();
+                    ->get()
+                    ->first();
                 break;
             case 'https://www.wegwijsnaarparijs.nl':
                 $website = Website::where('website_address', 'https://www.nachparis.de')
-                    ->get();
+                    ->get()
+                    ->first();
                 break;
             case 'https://www.nachparis.de':
                 $website = Website::where('website_address', 'https://www.wegwijsnaarparijs.nl')
-                    ->get();
+                    ->get()
+                    ->first();
                 break;
             case 'https://www.wegwijsnaar.nl':
                 $website = Website::where('website_address', 'https://www.dasfreitheitsgefuhl.de')
-                    ->get();
+                    ->get()
+                    ->first();
                 break;
             case 'https://www.dasfreitheitsgefuhl.de':
                 $website = Website::where('website_address', 'https://www.wegwijsnaar.nl')
-                    ->get();
+                    ->get()
+                    ->first();
                 break;
         }
 

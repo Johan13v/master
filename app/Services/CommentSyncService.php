@@ -76,6 +76,12 @@ class CommentSyncService
                         ->first();  // Retrieve only the first result
                     $parent = $parent->id;
                 }
+
+                $language = 'NL';
+                if($this->getToLanguage($website) == 'Dutch') {
+                    $language = 'DE';
+                }
+
                 $target_post_id = $this->retrievePostId($website, $commentData['post']);
                     // If the comment doesn't exist, save it to the database
                 Comment::create([
@@ -87,6 +93,7 @@ class CommentSyncService
                     'post_id' => $commentData['post'],
                     'target_post_id' => $target_post_id,
                     'created_at' => $commentData['date'],
+                    'original_language' => $language,
                     'parent_id' => $parent
                 ]);
             }
@@ -136,7 +143,7 @@ class CommentSyncService
                 $response = OpenAI::chat()->create([
                     'model' => 'gpt-4-turbo',
                     'messages' => [
-                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs."],
+                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs. The response should be in Dutch."],
                         ['role' => 'user', 'content' => $comment->content],
                     ],
                 ]);
@@ -241,6 +248,8 @@ class CommentSyncService
         $url = '';
         if(isset($response['acf']['de_link'])) {
             $url = $response['acf']['de_link'];
+        } else if (isset($response['acf']['nl_link'])) {
+            $url = $response['acf']['nl_link'];
         }
 
         if( $url == '' ) {

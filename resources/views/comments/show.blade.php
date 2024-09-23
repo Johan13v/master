@@ -112,19 +112,20 @@
         </div>
     @endif
 
+    @if($comment->language == 'NL' || $comment->translated_comment_id != '')
+        <h2 class="font-bold text-lg mb-4">Nieuwe reactie</h2>
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <form method="POST" action="{{ route('comments.store') }}">
+                @csrf
+                <input type="hidden" name="parent_id" value="{{ $comment->id }}">
+                <textarea name="content" class="wysiwyg" placeholder="Write a reply...">{{ $comment->generated_response}}</textarea>
 
-    <h2 class="font-bold text-lg mb-4">Nieuwe reactie</h2>
-    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <form method="POST" action="{{ route('comments.store') }}">
-            @csrf
-            <input type="hidden" name="parent_id" value="{{ $comment->id }}">
-            <textarea name="content" class="wysiwyg" placeholder="Write a reply...">{{ $comment->generated_response}}</textarea>
-
-            <div class="mt-4">
-                <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">Reageer</button>
-            </div>
-        </form>
-    </div>
+                <div class="mt-4">
+                    <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">Reageer</button>
+                </div>
+            </form>
+        </div>
+    @endif
 </div>
 
 <script src="https://cdn.tiny.cloud/1/cudvr6zma9km9xbm4a1eme3d01d5nospqb4v68hoeaa8coh1/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
