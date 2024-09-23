@@ -97,7 +97,7 @@ class CommentSyncService
     {
         $comments = Comment::where('website_id', $website->id)
         ->whereNull('translated_content')
-        ->whereIsNotNull('target_post_id')
+        ->whereNotNull('target_post_id')
         ->get();
 
 
