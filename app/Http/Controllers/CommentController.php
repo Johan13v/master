@@ -38,7 +38,7 @@ class CommentController extends Controller
             ->first();  // Retrieve only the first result
 
             if($comment != null) {
-                $sinceDate = $comment->created_at;
+                $sinceDate = $comment->created_at->toW3cString();
             }
 
             $this->service->fetchCommentsFromWebsite($website, $sinceDate);
