@@ -74,6 +74,10 @@ class CommentSyncService
                 if($commentData['parent'] != '' && $commentData['parent'] != '0') {
                     $parent = Comment::where('reference_id', $website->id . '_' . $commentData['parent'])
                         ->first();  // Retrieve only the first result
+                    if (is_null($parent)) {
+                        continue;
+                    }
+
                     $parent = $parent->id;
                 }
 
