@@ -112,7 +112,7 @@
         </div>
     @endif
 
-    @if($comment->language == 'NL' || $comment->translated_comment_id != '')
+    @if($comment->original_language == 'NL' || $comment->translated_comment_id != '')
         <h2 class="font-bold text-lg mb-4">Nieuwe reactie</h2>
         <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
             <form method="POST" action="{{ route('comments.store') }}">
