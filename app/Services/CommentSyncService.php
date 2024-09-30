@@ -147,7 +147,7 @@ class CommentSyncService
                 $response = OpenAI::chat()->create([
                     'model' => 'gpt-4-turbo',
                     'messages' => [
-                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs. The response should be in Dutch."],
+                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs. The response should be in Dutch. Could you be as specific as possible in your answer and not get stuck on usually and probably? I'll do a fact check myself. Please include references to the specific pages where the information you provided can be found."],
                         ['role' => 'user', 'content' => $comment->content],
                     ],
                 ]);

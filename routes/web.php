@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\RevenueStreamController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\SearchController;
 use App\Services\CommentSyncService;
 
 Route::get('/', function () {
@@ -53,5 +54,9 @@ Route::post('/comments/', [CommentController::class, 'store'])->name('comments.s
 
 Route::post('/comments/{comment}/approve', [CommentController::class, 'approve'])->name('comments.approve');
 Route::post('/comments/{comment}/reject', [CommentController::class, 'reject'])->name('comments.reject');
+
+
+Route::get('/search-google', [SearchController::class, 'searchGoogle'])->name('search-google');
+Route::post('/blacklist/add', [SearchController::class, 'addToBlacklist'])->name('blacklist.add');
 
 require __DIR__.'/auth.php';

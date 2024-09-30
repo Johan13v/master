@@ -168,6 +168,7 @@ class CommentController extends Controller
             ]);
 
         $comment_id = $response->json();
+        dd($comment_id);
         $comment_id = $comment_id['id'];
 
         $response = OpenAI::chat()->create([
