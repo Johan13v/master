@@ -35,7 +35,12 @@ class ImportController extends Controller
         $path = $request->file('csv_file')->getRealPath();
 
         $fileContent = file_get_contents($path);
-        $fileContent = mb_convert_encoding($fileContent, 'UTF-8', 'UTF-16');
+        $encoding = mb_detect_encoding($fileContent, ['UTF-8', 'UTF-16', 'ISO-8859-1'], true);
+
+        // Convert to UTF-8 only if it's not already in UTF-8
+        if ($encoding !== 'UTF-8') {
+            $fileContent = mb_convert_encoding($fileContent, 'UTF-8', $encoding);
+        }
 
         // Replace commas within quotes to avoid splitting on them
         // $fileContent = preg_replace_callback(
