@@ -98,6 +98,7 @@ class CommentSyncService
                     'target_post_id' => $target_post_id,
                     'created_at' => $commentData['date'],
                     'original_language' => $language,
+                    'url' => $link,
                     'parent_id' => $parent
                 ]);
             }

@@ -19,7 +19,8 @@ class Comment extends Model
         'target_post_id',
         'translated_comment_id',
         'generated_response', // Add parent_id to fillable properties
-        'original_language'
+        'original_language',
+        'url'
     ];
 
     // Relationship to get child comments (replies)

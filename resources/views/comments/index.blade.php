@@ -49,6 +49,10 @@
                         @endif
                     </td>
                     <td class="py-2 px-4 border-b border-gray-200">
+                        <form action="{{ route('comments.reject', $comment->id) }}" method="POST">
+                            @csrf
+                            <button type="submit">Reject</button>
+                        </form>
                         <a href="{{ route('comments.show', $comment->id) }}" class="text-blue-500 hover:underline">Review</a>
                     </td>
                 </tr>

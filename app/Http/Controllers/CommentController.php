@@ -171,7 +171,7 @@ class CommentController extends Controller
         $comment_id = $comment_id['id'];
 
         $response = OpenAI::chat()->create([
-            'model' => 'gpt-4-turbo',
+            'model' => 'gpt-4o',
             'messages' => [
                 ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
                 ['role' => 'user', 'content' => $validatedData['content']],
@@ -215,7 +215,7 @@ class CommentController extends Controller
         ]);
 
         $response = OpenAI::chat()->create([
-            'model' => 'gpt-4-turbo',
+            'model' => 'gpt-4o',
             'messages' => [
                 ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($comment->website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
                 ['role' => 'user', 'content' => $validatedData['content']],
