@@ -33,7 +33,34 @@ class ImportController extends Controller
         ]);
 
         $path = $request->file('csv_file')->getRealPath();
-        $data = array_map('str_getcsv', file($path));
+
+        $fileContent = file_get_contents($path);
+        $fileContent = mb_convert_encoding($fileContent, 'UTF-8', 'UTF-16');
+
+        // Replace commas within quotes to avoid splitting on them
+        // $fileContent = preg_replace_callback(
+        //     '/"(.*?)"/',
+        //     function ($matches) {
+        //         return str_replace(',', '.', $matches[0]);
+        //     },
+        //     $fileContent
+        // );
+
+        $data = [];
+        $tempFilePath = 'temp.csv';
+        file_put_contents($tempFilePath, $fileContent);
+
+        if (($handle = fopen($tempFilePath, 'r')) !== false) {
+            while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
+                // Replace placeholder back to commas
+                $data[] = $row;
+            }
+            fclose($handle);
+        }
+
+        unlink($tempFilePath); // Clean up the temporary file
+
+
         $header = array_shift($data);
 
         $unmatchedRows = [];
@@ -47,7 +74,9 @@ class ImportController extends Controller
         $websites = Website::all();
 
         DB::transaction(function () use ($data, $request, $header, $revenueStream, &$unmatchedRows, $import, $cities, $websites) {
+
             foreach ($data as $row) {
+
                 $rowData = array_combine($header, $row);
 
                 $commission = array(
@@ -338,7 +367,11 @@ class ImportController extends Controller
                 $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaarparijs')->first();
             }
         } else if (!$commission['website']) {
-            $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();
+            if ($commission['customerLanguage'] == 'DE') {
+                $commission['website'] = Website::whereJsonContains('matchers', 'dasfreiheitsgefuhl')->first();
+            } else {
+                $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();
+            }
         }
 
         return $commission;
