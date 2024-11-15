@@ -373,7 +373,11 @@ class ImportController extends Controller
             }
         } else if (!$commission['website']) {
             if ($commission['customerLanguage'] == 'DE') {
-                $commission['website'] = Website::whereJsonContains('matchers', 'dasfreiheitsgefuhl')->first();
+                if($commission['city'] == null) {
+                    $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
+                } else {
+                    $commission['website'] = Website::whereJsonContains('matchers', 'dasfreiheitsgefuhl')->first();
+                }
             } else {
                 $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();
             }
