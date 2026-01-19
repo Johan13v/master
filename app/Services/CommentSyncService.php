@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Comment;
 use App\Models\Website;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\ConnectionException;
 use OpenAI\Laravel\Facades\OpenAI;
 
 
@@ -26,29 +27,58 @@ class CommentSyncService
         $statuses = ['approve', 'hold']; // The different statuses to fetch
         foreach ($statuses as $status) {
             $page = 1;
+            $maxPages = 15;
+            $allComments = [];
 
             do {
-                // Fetch comments from the WordPress site, including unapproved ones
-                $response = Http::withBasicAuth($website->username, $website->application_password)
-                    ->get("{$website->website_address}/wp-json/wp/v2/comments", [
-                        'per_page' => 100, // Fetch up to 100 comments per page
-                        'page' => $page, // Specify the page number for pagination
-                        'after' => $sinceDate, // Only fetch comments after a specific date
-                        'status' => $status, // Fetch all statuses
-                        'orderby' => 'date',
-                        'order' => 'asc',
-                    ]);
+                echo "➡️ Ophalen comments – pagina {$page}\n";
 
-
-                if ($response->successful()) {
-                    $comments = $response->json();
-
-                    $allComments = array_merge($allComments, $comments);
-                    $page++;
-                } else {
-                    break; // Break the loop if the request is unsuccessful
+                try {
+                    $response = Http::timeout(3) // ⏱️ max 5 seconden per call
+                        ->withBasicAuth($website->username, $website->application_password)
+                        ->get("{$website->website_address}/wp-json/wp/v2/comments", [
+                            'per_page' => 100,
+                            'page'     => $page,
+                            'after'    => $sinceDate,
+                            'status'   => $status,
+                            'orderby'  => 'date',
+                            'order'    => 'asc',
+                        ]);
+                } catch (ConnectionException $e) {
+                    echo "⛔ Afgebroken: HTTP timeout (> 5 seconden) op pagina {$page}\n";
+                    echo "   Foutmelding: {$e->getMessage()}\n";
+                    break;
                 }
-            } while (count($comments) > 0); // Continue fetching until no more comments
+
+                if (! $response->successful()) {
+                    echo "⛔ Afgebroken: HTTP fout op pagina {$page}\n";
+                    echo "   Statuscode: {$response->status()}\n";
+                    echo "   Response: {$response->body()}\n";
+                    break;
+                }
+
+                $comments = $response->json();
+
+                if (empty($comments)) {
+                    echo "✅ Klaar: geen comments meer (pagina {$page})\n";
+                    break;
+                }
+
+                $count = count($comments);
+                echo "✔️ {$count} comments opgehaald\n";
+
+                $allComments = array_merge($allComments, $comments);
+
+                if ($page >= $maxPages) {
+                    echo "⚠️ Afgekapt: maximaal {$maxPages} pagina’s bereikt\n";
+                    break;
+                }
+
+                $page++;
+            } while (true);
+
+            echo "🏁 Einde sync – totaal opgehaald: " . count($allComments) . " comments\n";
+
         }
 
         // Now that we have all the comments, process and store them
