@@ -280,6 +280,9 @@ class CommentSyncService
                 ->get("{$website->website_address}/wp-json/wp/v2/posts/" . $postid);
         $response = $response->json();
 
+        echo "🔍 Post {$postid} van {$website->website_address}\n";
+        echo "   ACF velden: " . json_encode($response['acf'] ?? []) . "\n";
+
         $url = '';
         if(isset($response['acf']['de_link'])) {
             $url = $response['acf']['de_link'];
@@ -288,25 +291,26 @@ class CommentSyncService
         }
 
         if( $url == '' ) {
+            echo "   ⚠️ Geen de_link of nl_link gevonden\n";
             return '';
         }
-        // Get the HTML content of the post
+
+        echo "   URL: {$url}\n";
         $html = file_get_contents($url);
 
-        // Check if the HTML was retrieved successfully
         if ($html === false) {
+            echo "   ⛔ file_get_contents mislukt voor {$url}\n";
             return '';
         }
 
-        // Use a regular expression to find the post ID from the body class
         preg_match('/class=["\'].*\bpostid-(\d+)\b.*["\']/', $html, $matches);
 
-        // Check if a match was found
         if (!empty($matches)) {
-            $post_id = $matches[1];
-            return $post_id;
+            echo "   ✅ Target post ID: {$matches[1]}\n";
+            return $matches[1];
         }
 
+        echo "   ⚠️ Geen postid-X gevonden in body class van {$url}\n";
         return '';
     }
 
