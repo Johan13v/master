@@ -52,6 +52,7 @@
                             <a href="{{ route('imports.index') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">All imports</a>
                             <a href="{{ route('tiqets.sync') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">Tiqets API Sync</a>
                             <a href="{{ route('adsense.sync') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">AdSense Sync</a>
+                            <a href="{{ route('tradetracker.sync') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">TradeTracker Sync</a>
                             @foreach ($revenueStreams as $revenueStream)
                                 <a href="{{ route('imports.showForm', $revenueStream) }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">
                                     {{ $revenueStream->title }}

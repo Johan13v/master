@@ -26,3 +26,10 @@ Schedule::call(function () {
         $service->syncDate(now()->subDay()->toDateString(), $revenueStream->id);
     }
 })->dailyAt('06:05')->name('adsense-daily-sync')->withoutOverlapping();
+
+Schedule::call(function () {
+    $revenueStream = \App\Models\RevenueStream::where('title', 'like', '%radetracker%')->first();
+    if ($revenueStream) {
+        app(\App\Services\TradeTrackerApiService::class)->syncDate(now()->subDay()->toDateString(), $revenueStream->id);
+    }
+})->dailyAt('06:10')->name('tradetracker-daily-sync')->withoutOverlapping();

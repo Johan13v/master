@@ -12,6 +12,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TiqetsSyncController;
 use App\Http\Controllers\AdSenseSyncController;
+use App\Http\Controllers\TradeTrackerSyncController;
 use App\Services\CommentSyncService;
 
 Route::get('/', function () {
@@ -51,6 +52,11 @@ Route::post('/adsense/disconnect', [AdSenseSyncController::class, 'disconnect'])
 Route::post('/adsense/sync/run', [AdSenseSyncController::class, 'sync'])->name('adsense.sync.run');
 Route::post('/adsense/sync/day', [AdSenseSyncController::class, 'syncDay'])->name('adsense.sync.day');
 Route::post('/adsense/sync/fix-day', [AdSenseSyncController::class, 'fixDay'])->name('adsense.fix-day');
+
+Route::get('/tradetracker/sync', [TradeTrackerSyncController::class, 'index'])->name('tradetracker.sync');
+Route::post('/tradetracker/sync/run', [TradeTrackerSyncController::class, 'sync'])->name('tradetracker.sync.run');
+Route::post('/tradetracker/sync/day', [TradeTrackerSyncController::class, 'syncDay'])->name('tradetracker.sync.day');
+Route::post('/tradetracker/fix-day', [TradeTrackerSyncController::class, 'fixDay'])->name('tradetracker.fix-day');
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);

@@ -44,6 +44,12 @@ return [
         'redirect_uri'  => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'tradetracker' => [
+        'customer_id' => env('TRADETRACKER_CUSTOMER_ID'),
+        'passphrase'  => env('TRADETRACKER_PASSPHRASE'),
+        'wsdl'        => 'http://api.tradetracker.com/soap?wsdl',
+    ],
+
     'tiqets' => [
         'token' => env('TIQETS_TOKEN'),
         'base_url' => 'https://api.tiqets.com/v2',
