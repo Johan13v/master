@@ -155,15 +155,30 @@ class TiqetsApiService
     public function getProductTitle(int $productId): string
     {
         return Cache::remember("tiqets_product_{$productId}", now()->addDays(30), function () use ($productId) {
-            $response = Http::withToken($this->token, 'Token')
-                ->get("{$this->baseUrl}/products/{$productId}");
+            $url = "{$this->baseUrl}/products/{$productId}";
+
+            $response = Http::withToken($this->token, 'Token')->get($url);
+
+            Log::debug('Tiqets product lookup', [
+                'product_id' => $productId,
+                'url'        => $url,
+                'status'     => $response->status(),
+                'body'       => $response->body(),
+            ]);
 
             if ($response->failed()) {
-                Log::warning("Tiqets: kon productnaam niet ophalen voor id {$productId}");
+                Log::warning("Tiqets: kon productnaam niet ophalen voor id {$productId}", [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
                 return (string) $productId;
             }
 
-            return $response->json('title') ?? (string) $productId;
+            $title = $response->json('title');
+
+            Log::debug("Tiqets product {$productId} → titel: {$title}");
+
+            return $title ?? (string) $productId;
         });
     }
 
