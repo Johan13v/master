@@ -62,26 +62,35 @@
                     Haal orders op voor een periode. Per dag wordt één importrecord aangemaakt.
                     Al geïmporteerde dagen worden automatisch overgeslagen.
                 </p>
-                <form action="{{ route('tiqets.sync.run') }}" method="POST" class="flex items-end gap-4 flex-wrap">
-                    @csrf
-                    <input type="hidden" name="mode" value="range">
+                <div class="flex items-end gap-4 flex-wrap mb-6">
                     <div>
                         <label class="block text-sm text-gray-700 mb-1">Van</label>
-                        <input type="date" name="from"
-                               value="{{ old('from') }}"
+                        <input type="date" id="backfill-from"
                                class="border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-700 mb-1">Tot</label>
-                        <input type="date" name="to"
-                               value="{{ old('to', now()->subDay()->toDateString()) }}"
+                        <input type="date" id="backfill-to"
+                               value="{{ now()->subDay()->toDateString() }}"
                                class="border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     </div>
-                    <button type="submit"
+                    <button id="backfill-btn" onclick="startBackfill()"
                             class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                         Start backfill
                     </button>
-                </form>
+                </div>
+
+                <!-- Voortgang -->
+                <div id="backfill-progress" class="hidden">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span id="backfill-status">Bezig...</span>
+                        <span id="backfill-counter"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                        <div id="backfill-bar" class="bg-indigo-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div id="backfill-log" class="text-xs text-gray-500 space-y-1 max-h-48 overflow-y-auto"></div>
+                </div>
             </div>
         </div>
 
@@ -134,4 +143,101 @@
 
     </div>
 </div>
+
+@push('scripts')
+<script>
+async function startBackfill() {
+    const from = document.getElementById('backfill-from').value;
+    const to   = document.getElementById('backfill-to').value;
+
+    if (!from || !to) {
+        alert('Vul beide datums in.');
+        return;
+    }
+
+    const days = getDaysBetween(from, to);
+    if (days.length === 0) return;
+
+    const btn      = document.getElementById('backfill-btn');
+    const progress = document.getElementById('backfill-progress');
+    const bar      = document.getElementById('backfill-bar');
+    const status   = document.getElementById('backfill-status');
+    const counter  = document.getElementById('backfill-counter');
+    const log      = document.getElementById('backfill-log');
+
+    btn.disabled = true;
+    btn.textContent = 'Bezig...';
+    progress.classList.remove('hidden');
+    log.innerHTML = '';
+
+    let created = 0, skipped = 0, existing = 0, unmatched = 0;
+
+    for (let i = 0; i < days.length; i++) {
+        const date = days[i];
+        counter.textContent = `${i + 1} / ${days.length}`;
+        status.textContent  = `Verwerken: ${date}`;
+        bar.style.width     = `${Math.round((i / days.length) * 100)}%`;
+
+        try {
+            const response = await fetch('{{ route('tiqets.sync.day') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ date }),
+            });
+
+            const result = await response.json();
+
+            let logLine = `${date}: `;
+            if (result.already_exists) {
+                logLine += 'al geïmporteerd';
+                existing++;
+            } else {
+                logLine += `${result.created} aangemaakt`;
+                if (result.skipped)         logLine += `, ${result.skipped} overgeslagen`;
+                if (result.unmatched_count) logLine += `, ${result.unmatched_count} onbekend`;
+                created   += result.created;
+                skipped   += result.skipped;
+                unmatched += result.unmatched_count;
+            }
+
+            const line = document.createElement('div');
+            line.textContent = logLine;
+            if (result.unmatched_count) line.classList.add('text-orange-500');
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+
+        } catch (e) {
+            const line = document.createElement('div');
+            line.textContent = `${date}: fout — ${e.message}`;
+            line.classList.add('text-red-500');
+            log.appendChild(line);
+        }
+    }
+
+    bar.style.width = '100%';
+    bar.classList.replace('bg-indigo-500', 'bg-green-500');
+    status.textContent = `Klaar — ${created} aangemaakt, ${skipped} overgeslagen, ${existing} al bestond${unmatched ? `, ${unmatched} onbekend` : ''}.`;
+    counter.textContent = '';
+    btn.disabled = false;
+    btn.textContent = 'Start backfill';
+
+    setTimeout(() => window.location.reload(), 2000);
+}
+
+function getDaysBetween(from, to) {
+    const days = [];
+    const current = new Date(from);
+    const end     = new Date(to);
+    while (current <= end) {
+        days.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+    }
+    return days;
+}
+</script>
+@endpush
 @endsection

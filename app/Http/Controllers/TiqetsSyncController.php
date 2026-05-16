@@ -31,6 +31,25 @@ class TiqetsSyncController extends Controller
         return view('tiqets.sync', compact('revenueStream', 'recentImports'));
     }
 
+    public function syncDay(Request $request)
+    {
+        $request->validate(['date' => 'required|date']);
+
+        $revenueStream = RevenueStream::where('title', 'like', '%iqets%')->firstOrFail();
+        $result = $this->tiqetsService->syncDate($request->date, $revenueStream->id);
+
+        $hasUnmatched = count($result['unmatched']) > 0;
+
+        return response()->json([
+            'date'          => $request->date,
+            'created'       => $result['created'],
+            'skipped'       => $result['skipped'],
+            'already_exists' => $result['already_exists'],
+            'has_unmatched' => $hasUnmatched,
+            'unmatched_count' => count($result['unmatched']),
+        ]);
+    }
+
     public function sync(Request $request)
     {
         $request->validate([
