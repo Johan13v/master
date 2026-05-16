@@ -197,13 +197,11 @@ async function startBackfill() {
     const counter         = document.getElementById('backfill-counter');
     const log             = document.getElementById('backfill-log');
     const unmatchedSection = document.getElementById('unmatched-section');
-    const unmatchedDays   = document.getElementById('unmatched-days');
 
     btn.disabled = true;
     btn.textContent = 'Bezig...';
     progress.classList.remove('hidden');
     unmatchedSection.classList.add('hidden');
-    unmatchedDays.innerHTML = '';
     log.innerHTML = '';
     bar.classList.replace('bg-green-500', 'bg-indigo-500');
 
