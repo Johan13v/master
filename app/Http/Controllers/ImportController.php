@@ -271,6 +271,11 @@ class ImportController extends Controller
             }
         });
 
+        $returnTo = $request->input('return_to');
+        if ($returnTo && str_starts_with($returnTo, url('/'))) {
+            return redirect($returnTo)->with('success', 'Matchers opgeslagen en commissies geïmporteerd.');
+        }
+
         return redirect()->route('imports.index')->with('success', 'Matchers updated and commissions imported successfully.');
     }
 

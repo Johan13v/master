@@ -23,6 +23,7 @@
                 </p>
 
                 <form action="{{ route('imports.updateMatchers', $revenueStream) }}" method="POST">
+                    <input type="hidden" name="return_to" value="{{ route('tiqets.sync') }}">
                     @csrf
                     <input type="hidden" name="import_id" value="{{ $import->id }}">
 

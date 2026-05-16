@@ -33,7 +33,7 @@ class AdSenseSyncController extends Controller
             ->whereDoesntHave('commissions')
             ->orderByDesc('title')
             ->get()
-            ->map(fn($i) => substr($i->title, 13)); // "AdSense API - 2026-05-01" → "2026-05-01"
+            ->map(fn($i) => substr($i->title, 14)); // "AdSense API - 2026-05-01" → "2026-05-01"
 
         return view('adsense.sync', [
             'connected'     => $this->adSense->isConnected(),

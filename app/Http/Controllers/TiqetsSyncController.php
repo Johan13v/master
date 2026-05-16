@@ -37,7 +37,7 @@ class TiqetsSyncController extends Controller
             ->whereDoesntHave('commissions')
             ->orderByDesc('title')
             ->get()
-            ->map(fn($i) => substr($i->title, 12)); // "Tiqets API - 2026-05-01" → "2026-05-01"
+            ->map(fn($i) => substr($i->title, 13)); // "Tiqets API - 2026-05-01" → "2026-05-01"
 
         return view('tiqets.sync', compact('revenueStream', 'monthlyStats', 'unmatchedDays'));
     }
