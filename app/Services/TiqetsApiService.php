@@ -174,7 +174,7 @@ class TiqetsApiService
                 return (string) $productId;
             }
 
-            $title = $response->json('title');
+            $title = $response->json('product.title');
 
             Log::debug("Tiqets product {$productId} → titel: {$title}");
 
