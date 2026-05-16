@@ -29,11 +29,18 @@ class AdSenseSyncController extends Controller
             ->orderByRaw("month DESC")
             ->get();
 
+        $unmatchedDays = Import::where('title', 'like', 'AdSense API - %')
+            ->whereDoesntHave('commissions')
+            ->orderByDesc('title')
+            ->get()
+            ->map(fn($i) => substr($i->title, 13)); // "AdSense API - 2026-05-01" → "2026-05-01"
+
         return view('adsense.sync', [
             'connected'     => $this->adSense->isConnected(),
             'authUrl'       => $this->adSense->isConnected() ? null : $this->adSense->getAuthUrl(),
             'revenueStream' => $revenueStream,
             'monthlyStats'  => $monthlyStats,
+            'unmatchedDays' => $unmatchedDays,
         ]);
     }
 

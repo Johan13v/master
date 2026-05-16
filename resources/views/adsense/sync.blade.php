@@ -227,6 +227,31 @@ GOOGLE_REDIRECT_URI={{ route('adsense.callback') }}</pre>
             </div>
         </div>
 
+        <!-- Dagen met ongematchte orders -->
+        @if($unmatchedDays->isNotEmpty())
+        <div class="bg-orange-50 border border-orange-200 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-orange-700 mb-2">Ongematchte orders — actie vereist</h3>
+                <p class="text-sm text-orange-600 mb-4">
+                    Voor de onderstaande dagen konden sites niet automatisch worden gekoppeld.
+                    Klik op een datum om matchers in te stellen.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($unmatchedDays as $date)
+                        <form action="{{ route('adsense.fix-day') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="date" value="{{ $date }}">
+                            <button type="submit"
+                                    class="bg-orange-100 hover:bg-orange-200 text-orange-800 text-sm font-medium px-4 py-2 rounded border border-orange-300">
+                                {{ $date }}
+                            </button>
+                        </form>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
         @endif {{-- end connected --}}
 
     </div>

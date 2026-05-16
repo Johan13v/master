@@ -213,19 +213,29 @@ class AdSenseApiService
         $start = Carbon::parse($startDate);
         $end   = Carbon::parse($endDate);
 
-        $response = Http::withToken($accessToken)
-            ->get("https://adsense.googleapis.com/v2/{$accountId}/reports:generate", [
-                'dateRange'              => 'CUSTOM',
-                'startDate.year'         => $start->year,
-                'startDate.month'        => $start->month,
-                'startDate.day'          => $start->day,
-                'endDate.year'           => $end->year,
-                'endDate.month'          => $end->month,
-                'endDate.day'            => $end->day,
-                'metrics'                => 'ESTIMATED_EARNINGS',
-                'dimensions'             => ['DATE', 'DOMAIN_NAME'],
-                'currencyCode'           => 'EUR',
-            ]);
+        // Google verwacht herhaalde query params: dimensions=DATE&dimensions=DOMAIN_NAME
+        // Laravel's HTTP client encodeert arrays verkeerd, dus we bouwen de URL zelf
+        $query = http_build_query([
+            'dateRange'       => 'CUSTOM',
+            'startDate.year'  => $start->year,
+            'startDate.month' => $start->month,
+            'startDate.day'   => $start->day,
+            'endDate.year'    => $end->year,
+            'endDate.month'   => $end->month,
+            'endDate.day'     => $end->day,
+            'metrics'         => 'ESTIMATED_EARNINGS',
+            'currencyCode'    => 'EUR',
+        ]) . '&dimensions=DATE&dimensions=DOMAIN_NAME';
+
+        $url = "https://adsense.googleapis.com/v2/{$accountId}/reports:generate?{$query}";
+
+        $response = Http::withToken($accessToken)->get($url);
+
+        Log::debug('AdSense report', [
+            'url'    => $url,
+            'status' => $response->status(),
+            'body'   => $response->body(),
+        ]);
 
         if ($response->failed()) {
             Log::error('AdSense report mislukt', ['status' => $response->status(), 'body' => $response->body()]);
@@ -233,6 +243,8 @@ class AdSenseApiService
         }
 
         $rows = $response->json('rows') ?? [];
+
+        Log::debug('AdSense rows ontvangen', ['count' => count($rows), 'rows' => $rows]);
 
         return array_map(fn($row) => [
             'date'     => $row['cells'][0]['value'],
@@ -265,6 +277,12 @@ class AdSenseApiService
                 $commission['city'] = City::whereJsonContains('matchers', 'Onbekend..')->first();
             }
         }
+
+        Log::debug('AdSense matching', [
+            'sitebrand' => $commission['sitebrand'],
+            'website'   => $commission['website']?->title ?? 'geen match',
+            'city'      => $commission['city']?->title ?? 'geen match',
+        ]);
 
         return $commission;
     }
