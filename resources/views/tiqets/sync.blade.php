@@ -90,13 +90,37 @@
 
                     <!-- Ongematchte dagen -->
                     <div id="unmatched-section" class="hidden">
-                        <p class="text-sm font-medium text-orange-700 mb-2">Ongematchte orders gevonden — klik op een datum om matchers in te stellen:</p>
-                        <div id="unmatched-days" class="flex flex-wrap gap-2"></div>
+                        <p class="text-sm font-medium text-orange-700 mb-2">Nieuwe ongematchte dagen gevonden — zie het blok hieronder.</p>
                     </div>
                 </div>
             </div>
         </div>
 
+        @endif
+
+        <!-- Dagen met ongematchte orders -->
+        @if($unmatchedDays->isNotEmpty())
+        <div class="bg-orange-50 border border-orange-200 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-orange-700 mb-2">Ongematchte orders — actie vereist</h3>
+                <p class="text-sm text-orange-600 mb-4">
+                    Voor de onderstaande dagen zijn orders binnengekomen die niet automatisch gekoppeld konden worden.
+                    Klik op een datum om matchers in te stellen.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($unmatchedDays as $date)
+                        <form action="{{ route('tiqets.sync.fix-day') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="date" value="{{ $date }}">
+                            <button type="submit"
+                                    class="bg-orange-100 hover:bg-orange-200 text-orange-800 text-sm font-medium px-4 py-2 rounded border border-orange-300">
+                                {{ $date }}
+                            </button>
+                        </form>
+                    @endforeach
+                </div>
+            </div>
+        </div>
         @endif
 
         <!-- Cache wissen -->
@@ -240,16 +264,8 @@ async function startBackfill() {
 
     if (daysWithUnmatched.length > 0) {
         unmatchedSection.classList.remove('hidden');
-        daysWithUnmatched.forEach(date => {
-            const btn = document.createElement('button');
-            btn.textContent = date;
-            btn.className = 'bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs font-medium px-3 py-1 rounded border border-orange-300';
-            btn.onclick = () => fixDay(date);
-            unmatchedDays.appendChild(btn);
-        });
-    } else {
-        setTimeout(() => window.location.reload(), 1500);
     }
+    setTimeout(() => window.location.reload(), 1500);
 }
 
 function fixDay(date) {

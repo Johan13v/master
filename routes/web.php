@@ -11,6 +11,7 @@ use App\Http\Controllers\RevenueStreamController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TiqetsSyncController;
+use App\Http\Controllers\AdSenseSyncController;
 use App\Services\CommentSyncService;
 
 Route::get('/', function () {
@@ -43,6 +44,13 @@ Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets
 Route::post('/tiqets/sync/clear-cache', [TiqetsSyncController::class, 'clearCache'])->name('tiqets.sync.clear-cache');
 Route::post('/tiqets/sync/day', [TiqetsSyncController::class, 'syncDay'])->name('tiqets.sync.day');
 Route::post('/tiqets/sync/fix-day', [TiqetsSyncController::class, 'fixDay'])->name('tiqets.sync.fix-day');
+
+Route::get('/adsense/sync', [AdSenseSyncController::class, 'index'])->name('adsense.sync');
+Route::get('/adsense/callback', [AdSenseSyncController::class, 'callback'])->name('adsense.callback');
+Route::post('/adsense/disconnect', [AdSenseSyncController::class, 'disconnect'])->name('adsense.disconnect');
+Route::post('/adsense/sync/run', [AdSenseSyncController::class, 'sync'])->name('adsense.sync.run');
+Route::post('/adsense/sync/day', [AdSenseSyncController::class, 'syncDay'])->name('adsense.sync.day');
+Route::post('/adsense/sync/fix-day', [AdSenseSyncController::class, 'fixDay'])->name('adsense.fix-day');
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);

@@ -32,7 +32,14 @@ class TiqetsSyncController extends Controller
             ->orderByRaw("month DESC")
             ->get();
 
-        return view('tiqets.sync', compact('revenueStream', 'monthlyStats'));
+        // Imports met 0 commissies = ongematchte orders wachten op handmatige koppeling
+        $unmatchedDays = Import::where('title', 'like', 'Tiqets API - %')
+            ->whereDoesntHave('commissions')
+            ->orderByDesc('title')
+            ->get()
+            ->map(fn($i) => substr($i->title, 12)); // "Tiqets API - 2026-05-01" → "2026-05-01"
+
+        return view('tiqets.sync', compact('revenueStream', 'monthlyStats', 'unmatchedDays'));
     }
 
     public function fixDay(Request $request)
@@ -63,7 +70,13 @@ class TiqetsSyncController extends Controller
             ]);
         }
 
-        return redirect()->route('tiqets.sync')->with('success', $this->buildMessage([$result]));
+        $remaining = Import::where('title', 'like', 'Tiqets API - %')->whereDoesntHave('commissions')->count();
+        $msg = $this->buildMessage([$result]);
+        if ($remaining > 0) {
+            $msg .= " — nog {$remaining} dag(en) wachten op koppeling.";
+        }
+
+        return redirect()->route('tiqets.sync')->with('success', $msg);
     }
 
     public function syncDay(Request $request)

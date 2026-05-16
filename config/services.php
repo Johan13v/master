@@ -38,6 +38,12 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
     ],
 
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri'  => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'tiqets' => [
         'token' => env('TIQETS_TOKEN'),
         'base_url' => 'https://api.tiqets.com/v2',
