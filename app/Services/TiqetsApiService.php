@@ -136,7 +136,7 @@ class TiqetsApiService
 
     public function fetchOrders(string $startDate, string $endDate, int $page = 1): array
     {
-        $response = Http::withToken($this->token)
+        $response = Http::withToken($this->token, 'Token')
             ->get("{$this->baseUrl}/reports/orders", [
                 'start_date' => $startDate,
                 'end_date'   => $endDate,
@@ -155,7 +155,7 @@ class TiqetsApiService
     public function getProductTitle(int $productId): string
     {
         return Cache::remember("tiqets_product_{$productId}", now()->addDays(30), function () use ($productId) {
-            $response = Http::withToken($this->token)
+            $response = Http::withToken($this->token, 'Token')
                 ->get("{$this->baseUrl}/products/{$productId}");
 
             if ($response->failed()) {
