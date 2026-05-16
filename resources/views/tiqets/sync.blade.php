@@ -90,7 +90,11 @@
 
                     <!-- Ongematchte dagen -->
                     <div id="unmatched-section" class="hidden">
-                        <p class="text-sm font-medium text-orange-700 mb-2">Nieuwe ongematchte dagen gevonden — zie het blok hieronder.</p>
+                        <p class="text-sm font-medium text-orange-700 mb-2">Ongematchte orders gevonden — klik op een datum om matchers in te stellen:</p>
+                        <div id="unmatched-days" class="flex flex-wrap gap-2 mb-3"></div>
+                        <button onclick="window.location.reload()" class="text-sm text-gray-500 hover:text-gray-700 underline">
+                            Pagina vernieuwen
+                        </button>
                     </div>
                 </div>
             </div>
@@ -197,11 +201,13 @@ async function startBackfill() {
     const counter         = document.getElementById('backfill-counter');
     const log             = document.getElementById('backfill-log');
     const unmatchedSection = document.getElementById('unmatched-section');
+    const unmatchedDays   = document.getElementById('unmatched-days');
 
     btn.disabled = true;
     btn.textContent = 'Bezig...';
     progress.classList.remove('hidden');
     unmatchedSection.classList.add('hidden');
+    unmatchedDays.innerHTML = '';
     log.innerHTML = '';
     bar.classList.replace('bg-green-500', 'bg-indigo-500');
 
@@ -262,8 +268,16 @@ async function startBackfill() {
 
     if (daysWithUnmatched.length > 0) {
         unmatchedSection.classList.remove('hidden');
+        daysWithUnmatched.forEach(date => {
+            const b = document.createElement('button');
+            b.textContent = date;
+            b.className = 'bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs font-medium px-3 py-1 rounded border border-orange-300';
+            b.onclick = () => fixDay(date);
+            unmatchedDays.appendChild(b);
+        });
+    } else {
+        setTimeout(() => window.location.reload(), 1500);
     }
-    setTimeout(() => window.location.reload(), 1500);
 }
 
 function fixDay(date) {
