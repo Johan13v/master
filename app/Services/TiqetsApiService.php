@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 class TiqetsApiService
 {
     private string $baseUrl;
-    private string $token;
+    private ?string $token;
 
     public function __construct()
     {
@@ -47,8 +47,9 @@ class TiqetsApiService
         $websites = Website::all();
         $created = 0;
         $skipped = 0;
+        $unmatchedRows = [];
 
-        DB::transaction(function () use ($orders, $revenueStreamId, $import, $cities, $websites, &$created, &$skipped) {
+        DB::transaction(function () use ($orders, $revenueStreamId, $import, $cities, $websites, &$created, &$skipped, &$unmatchedRows) {
             foreach ($orders as $order) {
                 $referenceId = $order['order_reference_id'];
 
@@ -93,12 +94,23 @@ class TiqetsApiService
 
                     $created++;
                 } else {
-                    $skipped++;
+                    $unmatchedRows[] = [
+                        'commission'      => $commission,
+                        'unmatchedCity'   => !$commission['city'],
+                        'unmatchedWebsite' => !$commission['website'],
+                    ];
                 }
             }
         });
 
-        return ['created' => $created, 'skipped' => $skipped, 'title' => $title, 'already_exists' => false];
+        return [
+            'created'       => $created,
+            'skipped'       => $skipped,
+            'unmatched'     => $unmatchedRows,
+            'import'        => $import,
+            'title'         => $title,
+            'already_exists' => false,
+        ];
     }
 
     /**

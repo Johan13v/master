@@ -38,7 +38,7 @@ class TiqetsSyncController extends Controller
 
         if ($request->mode === 'single') {
             $result = $this->tiqetsService->syncDate($request->date, $revenueStream->id);
-            $message = $this->buildMessage([$result]);
+            $results = [$result];
         } else {
             $from = Carbon::parse($request->from);
             $to   = Carbon::parse($request->to);
@@ -47,11 +47,27 @@ class TiqetsSyncController extends Controller
             for ($day = $from->copy(); $day->lte($to); $day->addDay()) {
                 $results[] = $this->tiqetsService->syncDate($day->toDateString(), $revenueStream->id);
             }
-
-            $message = $this->buildMessage($results);
         }
 
-        return redirect()->route('tiqets.sync')->with('success', $message);
+        $allUnmatched = array_merge(...array_column($results, 'unmatched'));
+
+        if (count($allUnmatched) > 0) {
+            // Gebruik de import van de laatste verwerkte dag voor de updateMatchers route
+            $lastImport = collect($results)->last(fn($r) => !$r['already_exists']);
+            $cities   = \App\Models\City::all();
+            $websites = \App\Models\Website::all();
+
+            return view('tiqets.unmatched', [
+                'unmatchedRows' => $allUnmatched,
+                'revenueStream' => $revenueStream,
+                'import'        => $lastImport['import'],
+                'cities'        => $cities,
+                'websites'      => $websites,
+                'summary'       => $this->buildMessage($results),
+            ]);
+        }
+
+        return redirect()->route('tiqets.sync')->with('success', $this->buildMessage($results));
     }
 
     private function buildMessage(array $results): string
