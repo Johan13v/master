@@ -16,7 +16,11 @@ class ImportController extends Controller
 
     public function index()
     {
-        $imports = Import::with('revenueStream')->get();
+        $imports = Import::with(['revenueStream', 'commissions'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('revenueStream.title');
+
         return view('imports.index', compact('imports'));
     }
 
