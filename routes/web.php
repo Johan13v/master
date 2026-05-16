@@ -42,6 +42,7 @@ Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets
 Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');
 Route::post('/tiqets/sync/clear-cache', [TiqetsSyncController::class, 'clearCache'])->name('tiqets.sync.clear-cache');
 Route::post('/tiqets/sync/day', [TiqetsSyncController::class, 'syncDay'])->name('tiqets.sync.day');
+Route::post('/tiqets/sync/fix-day', [TiqetsSyncController::class, 'fixDay'])->name('tiqets.sync.fix-day');
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);

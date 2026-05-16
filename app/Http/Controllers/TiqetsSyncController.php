@@ -22,13 +22,48 @@ class TiqetsSyncController extends Controller
     {
         $revenueStream = RevenueStream::where('title', 'like', '%iqets%')->first();
 
-        $recentImports = Import::with('commissions')
-            ->where('title', 'like', 'Tiqets API - %')
-            ->orderByDesc('created_at')
-            ->limit(10)
+        $monthlyStats = Import::join('commissions', 'imports.id', '=', 'commissions.import_id')
+            ->where('imports.title', 'like', 'Tiqets API - %')
+            ->selectRaw("DATE_FORMAT(STR_TO_DATE(SUBSTRING(imports.title, 13), '%Y-%m-%d'), '%Y-%m') as month")
+            ->selectRaw('COUNT(DISTINCT imports.id) as days')
+            ->selectRaw('COUNT(commissions.id) as commissions')
+            ->selectRaw('SUM(commissions.amount) as total')
+            ->groupByRaw("DATE_FORMAT(STR_TO_DATE(SUBSTRING(imports.title, 13), '%Y-%m-%d'), '%Y-%m')")
+            ->orderByRaw("month DESC")
             ->get();
 
-        return view('tiqets.sync', compact('revenueStream', 'recentImports'));
+        return view('tiqets.sync', compact('revenueStream', 'monthlyStats'));
+    }
+
+    public function fixDay(Request $request)
+    {
+        $request->validate(['date' => 'required|date']);
+
+        $title = 'Tiqets API - ' . $request->date;
+        $import = \App\Models\Import::where('title', $title)->first();
+
+        if ($import) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($import) {
+                $import->commissions()->delete();
+                $import->delete();
+            });
+        }
+
+        $revenueStream = RevenueStream::where('title', 'like', '%iqets%')->firstOrFail();
+        $result = $this->tiqetsService->syncDate($request->date, $revenueStream->id);
+
+        if (count($result['unmatched']) > 0) {
+            return view('tiqets.unmatched', [
+                'unmatchedRows' => $result['unmatched'],
+                'revenueStream' => $revenueStream,
+                'import'        => $result['import'],
+                'cities'        => \App\Models\City::all(),
+                'websites'      => \App\Models\Website::all(),
+                'summary'       => $this->buildMessage([$result]),
+            ]);
+        }
+
+        return redirect()->route('tiqets.sync')->with('success', $this->buildMessage([$result]));
     }
 
     public function syncDay(Request $request)

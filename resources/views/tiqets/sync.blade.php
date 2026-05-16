@@ -19,9 +19,7 @@
         @if($errors->any())
             <div class="bg-red-100 border border-red-400 text-red-800 px-4 py-3 rounded">
                 <ul class="list-disc list-inside">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                    @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
                 </ul>
             </div>
         @endif
@@ -46,8 +44,7 @@
                                value="{{ old('date', now()->subDay()->toDateString()) }}"
                                class="border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                     </div>
-                    <button type="submit"
-                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Sync
                     </button>
                 </form>
@@ -86,10 +83,16 @@
                         <span id="backfill-status">Bezig...</span>
                         <span id="backfill-counter"></span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-3">
                         <div id="backfill-bar" class="bg-indigo-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
-                    <div id="backfill-log" class="text-xs text-gray-500 space-y-1 max-h-48 overflow-y-auto"></div>
+                    <div id="backfill-log" class="text-xs text-gray-500 space-y-1 max-h-40 overflow-y-auto mb-4"></div>
+
+                    <!-- Ongematchte dagen -->
+                    <div id="unmatched-section" class="hidden">
+                        <p class="text-sm font-medium text-orange-700 mb-2">Ongematchte orders gevonden — klik op een datum om matchers in te stellen:</p>
+                        <div id="unmatched-days" class="flex flex-wrap gap-2"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -112,27 +115,29 @@
             </div>
         </div>
 
-        <!-- Recente API-imports -->
+        <!-- Overzicht per maand -->
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
-                <h3 class="text-lg font-medium text-gray-700 mb-4">Recente API-imports</h3>
-                @if($recentImports->isEmpty())
+                <h3 class="text-lg font-medium text-gray-700 mb-4">Overzicht per maand</h3>
+                @if($monthlyStats->isEmpty())
                     <p class="text-sm text-gray-500">Nog geen API-imports gevonden.</p>
                 @else
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead>
                             <tr class="text-left text-gray-500 uppercase text-xs">
-                                <th class="pb-2 pr-6">Titel</th>
-                                <th class="pb-2 pr-6">Aangemaakt op</th>
-                                <th class="pb-2">Commissies</th>
+                                <th class="pb-2 pr-8">Maand</th>
+                                <th class="pb-2 pr-8">Dagen geïmporteerd</th>
+                                <th class="pb-2 pr-8">Commissies</th>
+                                <th class="pb-2">Totaal bedrag</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            @foreach($recentImports as $import)
+                            @foreach($monthlyStats as $stat)
                                 <tr>
-                                    <td class="py-2 pr-6 text-gray-800">{{ $import->title }}</td>
-                                    <td class="py-2 pr-6 text-gray-600">{{ $import->created_at->format('d-m-Y H:i') }}</td>
-                                    <td class="py-2 text-gray-600">{{ $import->commissions->count() }}</td>
+                                    <td class="py-2 pr-8 font-medium text-gray-800">{{ $stat->month }}</td>
+                                    <td class="py-2 pr-8 text-gray-600">{{ $stat->days }}</td>
+                                    <td class="py-2 pr-8 text-gray-600">{{ $stat->commissions }}</td>
+                                    <td class="py-2 text-gray-600">€{{ number_format($stat->total, 2, ',', '.') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -144,33 +149,41 @@
     </div>
 </div>
 
+<!-- Verborgen fix-day form -->
+<form id="fix-day-form" action="{{ route('tiqets.sync.fix-day') }}" method="POST">
+    @csrf
+    <input type="hidden" id="fix-day-input" name="date" value="">
+</form>
+
 @push('scripts')
 <script>
 async function startBackfill() {
     const from = document.getElementById('backfill-from').value;
     const to   = document.getElementById('backfill-to').value;
 
-    if (!from || !to) {
-        alert('Vul beide datums in.');
-        return;
-    }
+    if (!from || !to) { alert('Vul beide datums in.'); return; }
 
     const days = getDaysBetween(from, to);
     if (days.length === 0) return;
 
-    const btn      = document.getElementById('backfill-btn');
-    const progress = document.getElementById('backfill-progress');
-    const bar      = document.getElementById('backfill-bar');
-    const status   = document.getElementById('backfill-status');
-    const counter  = document.getElementById('backfill-counter');
-    const log      = document.getElementById('backfill-log');
+    const btn             = document.getElementById('backfill-btn');
+    const progress        = document.getElementById('backfill-progress');
+    const bar             = document.getElementById('backfill-bar');
+    const status          = document.getElementById('backfill-status');
+    const counter         = document.getElementById('backfill-counter');
+    const log             = document.getElementById('backfill-log');
+    const unmatchedSection = document.getElementById('unmatched-section');
+    const unmatchedDays   = document.getElementById('unmatched-days');
 
     btn.disabled = true;
     btn.textContent = 'Bezig...';
     progress.classList.remove('hidden');
+    unmatchedSection.classList.add('hidden');
+    unmatchedDays.innerHTML = '';
     log.innerHTML = '';
+    bar.classList.replace('bg-green-500', 'bg-indigo-500');
 
-    let created = 0, skipped = 0, existing = 0, unmatched = 0;
+    let created = 0, skipped = 0, existing = 0, daysWithUnmatched = [];
 
     for (let i = 0; i < days.length; i++) {
         const date = days[i];
@@ -199,9 +212,9 @@ async function startBackfill() {
                 logLine += `${result.created} aangemaakt`;
                 if (result.skipped)         logLine += `, ${result.skipped} overgeslagen`;
                 if (result.unmatched_count) logLine += `, ${result.unmatched_count} onbekend`;
-                created   += result.created;
-                skipped   += result.skipped;
-                unmatched += result.unmatched_count;
+                created += result.created;
+                skipped += result.skipped;
+                if (result.unmatched_count) daysWithUnmatched.push(date);
             }
 
             const line = document.createElement('div');
@@ -220,12 +233,28 @@ async function startBackfill() {
 
     bar.style.width = '100%';
     bar.classList.replace('bg-indigo-500', 'bg-green-500');
-    status.textContent = `Klaar — ${created} aangemaakt, ${skipped} overgeslagen, ${existing} al bestond${unmatched ? `, ${unmatched} onbekend` : ''}.`;
+    status.textContent = `Klaar — ${created} aangemaakt, ${skipped} overgeslagen, ${existing} al bestond.`;
     counter.textContent = '';
     btn.disabled = false;
     btn.textContent = 'Start backfill';
 
-    setTimeout(() => window.location.reload(), 2000);
+    if (daysWithUnmatched.length > 0) {
+        unmatchedSection.classList.remove('hidden');
+        daysWithUnmatched.forEach(date => {
+            const btn = document.createElement('button');
+            btn.textContent = date;
+            btn.className = 'bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs font-medium px-3 py-1 rounded border border-orange-300';
+            btn.onclick = () => fixDay(date);
+            unmatchedDays.appendChild(btn);
+        });
+    } else {
+        setTimeout(() => window.location.reload(), 1500);
+    }
+}
+
+function fixDay(date) {
+    document.getElementById('fix-day-input').value = date;
+    document.getElementById('fix-day-form').submit();
 }
 
 function getDaysBetween(from, to) {
