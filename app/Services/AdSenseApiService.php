@@ -63,7 +63,9 @@ class AdSenseApiService
             throw new \RuntimeException('Google token uitwisseling mislukt: ' . $response->body());
         }
 
-        file_put_contents($this->tokenPath, json_encode($response->json()));
+        file_put_contents($this->tokenPath, json_encode(
+            array_merge($response->json(), ['created' => time()])
+        ));
     }
 
     public function disconnect(): void
@@ -77,7 +79,7 @@ class AdSenseApiService
     {
         $token = json_decode(file_get_contents($this->tokenPath), true);
 
-        $expiresAt = $token['created'] + $token['expires_in'] - 60;
+        $expiresAt = ($token['created'] ?? 0) + ($token['expires_in'] ?? 0) - 60;
         if (time() < $expiresAt && !empty($token['access_token'])) {
             return $token['access_token'];
         }
