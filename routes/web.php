@@ -10,6 +10,7 @@ use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\RevenueStreamController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\TiqetsSyncController;
 use App\Services\CommentSyncService;
 
 Route::get('/', function () {
@@ -36,6 +37,9 @@ Route::get('revenue-streams/{revenueStream}/import', [ImportController::class, '
 Route::post('revenue-streams/{revenueStream}/import', [ImportController::class, 'import'])->name('imports.import');
 Route::post('revenue-streams/{revenueStream}/import/update-matchers', [ImportController::class, 'updateMatchers'])->name('imports.updateMatchers');
 Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
+
+Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets.sync');
+Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);

@@ -145,15 +145,16 @@ class CommentSyncService
 
         foreach ($comments as $comment) {
 
-            $response = OpenAI::chat()->create([
-                'model' => 'gpt-4o',
-                'messages' => [
-                    ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
-                    ['role' => 'user', 'content' => $comment->content],
-                ],
-            ]);
+            // $response = OpenAI::chat()->create([
+            //     'model' => 'gpt-4o',
+            //     'messages' => [
+            //         ['role' => 'system', 'content' => "Translate the following comment into " . $this->getToLanguage($website) . " with a focus on semantic relevance. Please keep all HTML tags intact."],
+            //         ['role' => 'user', 'content' => $comment->content],
+            //     ],
+            // ]);
 
-            $comment->translated_content = $response['choices'][0]['message']['content'];
+            // $comment->translated_content = $response['choices'][0]['message']['content'];
+            $comment->translated_content = '';
             $comment->save();
         }
 
@@ -161,32 +162,32 @@ class CommentSyncService
 
     public function generateResponse($website)
     {
-        $comments = Comment::where('website_id', $website->id)
-            ->whereNull('generated_response')
-            ->where('created_at', '>', '2024-09-15')
-            ->whereNull('parent_id')
-            ->get();
+        // $comments = Comment::where('website_id', $website->id)
+        //     ->whereNull('generated_response')
+        //     ->where('created_at', '>', '2024-09-15')
+        //     ->whereNull('parent_id')
+        //     ->get();
 
 
-        foreach ($comments as $comment) {
-            $checkIfParent =
-                Comment::where('website_id', $website->id)
-                ->where('parent_id', $comment->id)
-                ->count();
+        // foreach ($comments as $comment) {
+        //     $checkIfParent =
+        //         Comment::where('website_id', $website->id)
+        //         ->where('parent_id', $comment->id)
+        //         ->count();
 
-            if($checkIfParent == 0) {
-                $response = OpenAI::chat()->create([
-                    'model' => 'gpt-4o',
-                    'messages' => [
-                        ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs. The response should be in Dutch. Could you be as specific as possible in your answer and not get stuck on usually and probably? I'll do a fact check myself. Please include references to the specific pages where the information you provided can be found."],
-                        ['role' => 'user', 'content' => $comment->content],
-                    ],
-                ]);
+        //     if($checkIfParent == 0) {
+        //         $response = OpenAI::chat()->create([
+        //             'model' => 'gpt-4o',
+        //             'messages' => [
+        //                 ['role' => 'system', 'content' => "Please generate a reponse in " . $this->getLanguage($website) . " on the following comment. Please include html tags for paragraphs. The response should be in Dutch. Could you be as specific as possible in your answer and not get stuck on usually and probably? I'll do a fact check myself. Please include references to the specific pages where the information you provided can be found."],
+        //                 ['role' => 'user', 'content' => $comment->content],
+        //             ],
+        //         ]);
 
-                $comment->generated_response = $response['choices'][0]['message']['content'];
-                $comment->save();
-            }
-        }
+        //         $comment->generated_response = $response['choices'][0]['message']['content'];
+        //         $comment->save();
+        //     }
+        // }
     }
 
     public function postCommentToWebsite(Comment $comment, Website $website)
@@ -262,11 +263,23 @@ class CommentSyncService
     }
 
     function askOpenAiIfSpam($content) {
+        $maxLength = 3000;
+
+        if (mb_strlen($content) > $maxLength) {
+            $content = mb_substr($content, 0, $maxLength);
+        }
+
         $response = OpenAI::chat()->create([
-            'model' => 'gpt-3.5-turbo',
+            'model' => 'gpt-4.1-mini',
             'messages' => [
-                ['role' => 'system', 'content' => "I got this comment on my travel blog. Do you think it is spam. Please answer yes or no only."],
-                ['role' => 'user', 'content' => $content],
+                [
+                    'role' => 'system',
+                    'content' => 'You moderate comments on a Dutch and German travel blog. Reply only with "yes" if the comment is spam or "no" if the comment is legitimate. Spam includes SEO spam, scam messages, irrelevant promotions, suspicious links, AI-generated junk, comments unrelated to travel or in a different language.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $content,
+                ],
             ],
         ]);
 

@@ -38,5 +38,9 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
     ],
 
+    'tiqets' => [
+        'token' => env('TIQETS_TOKEN'),
+        'base_url' => 'https://api.tiqets.com/v2',
+    ],
 
 ];

@@ -50,6 +50,7 @@
                         </button>
                         <div class="absolute hidden mt-2 w-48 bg-white border rounded shadow-md">
                             <a href="{{ route('imports.index') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">All imports</a>
+                            <a href="{{ route('tiqets.sync') }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">Tiqets API Sync</a>
                             @foreach ($revenueStreams as $revenueStream)
                                 <a href="{{ route('imports.showForm', $revenueStream) }}" class="block px-4 py-2 text-gray-800 hover:bg-gray-200">
                                     {{ $revenueStream->title }}
