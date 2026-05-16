@@ -12,6 +12,12 @@ class TiqetsSyncController extends Controller
 {
     public function __construct(private TiqetsApiService $tiqetsService) {}
 
+    public function clearCache()
+    {
+        \Illuminate\Support\Facades\Cache::flush();
+        return redirect()->route('tiqets.sync')->with('success', 'Cache geleegd — productnamen worden bij de volgende sync opnieuw opgehaald.');
+    }
+
     public function index()
     {
         $revenueStream = RevenueStream::where('title', 'like', '%iqets%')->first();

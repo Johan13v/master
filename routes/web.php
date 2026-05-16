@@ -40,6 +40,7 @@ Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('i
 
 Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets.sync');
 Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');
+Route::post('/tiqets/sync/clear-cache', [TiqetsSyncController::class, 'clearCache'])->name('tiqets.sync.clear-cache');
 
 
 Route::get('/fetch-comments', [CommentController::class, 'fetchComments']);

@@ -87,6 +87,22 @@
 
         @endif
 
+        <!-- Cache wissen -->
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700">Productnamen cache</h3>
+                    <p class="text-xs text-gray-500 mt-1">Wis de cache als productnamen als ID worden getoond.</p>
+                </div>
+                <form action="{{ route('tiqets.sync.clear-cache') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium py-2 px-4 rounded">
+                        Cache wissen
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <!-- Recente API-imports -->
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
