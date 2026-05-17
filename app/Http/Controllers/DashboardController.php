@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $totalRevenueData = $this->getTotalRevenueData($interval, $viewMode, $startDate, $endDate);
         $revenueDataByStream = $this->getRevenueDataByStream($revenueStreams, $interval, $viewMode, $startDate, $endDate);
 
-        return view('dashboard', compact('totalRevenueData', 'revenueDataByStream', 'revenueStreams', 'interval', 'viewMode', 'startDate', 'endDate'));
+        return view('dashboard', compact('totalRevenueData', 'revenueDataByStream', 'revenueStreams', 'interval', 'viewMode', 'startDate', 'endDate', 'websites', 'cities'));
     }
 
     private function getTotalRevenueData($interval, $viewMode, $startDate, $endDate)

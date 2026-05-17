@@ -21,6 +21,7 @@ Route::get('/', function () {
 
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/analytics', [App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -40,6 +41,7 @@ Route::post('revenue-streams/{revenueStream}/import', [ImportController::class, 
 Route::post('revenue-streams/{revenueStream}/import/update-matchers', [ImportController::class, 'updateMatchers'])->name('imports.updateMatchers');
 Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
 Route::delete('imports-by-month', [ImportController::class, 'destroyByMonth'])->name('imports.destroyByMonth');
+Route::post('imports/booking/backfill-affiliate-ids', [ImportController::class, 'backfillAffiliateIds'])->name('imports.backfillAffiliateIds');
 Route::get('imports/{import}/breakdown', [ImportController::class, 'breakdown'])->name('imports.breakdown');
 Route::post('imports/{import}/reassign', [ImportController::class, 'reassign'])->name('imports.reassign');
 Route::post('commissions/{commission}/reassign', [ImportController::class, 'reassignCommission'])->name('commissions.reassign');

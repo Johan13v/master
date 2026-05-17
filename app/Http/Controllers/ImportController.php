@@ -132,6 +132,7 @@ class ImportController extends Controller
                     $commission['cityName'] = $rowData['City'];
                     $commission['country'] = $rowData['Country'];
                     $commission['ufi'] = $rowData['UFI'] ?? null;
+                    $commission['affiliateId'] = $rowData['Affiliate ID'] ?? null;
                     $commission['status'] = $this->processStatus($rowData['Status']);
                 } elseif ($request->csv_type == 'tradetracker') {
                     $commission['referenceId'] = $rowData['ID'];
@@ -213,6 +214,7 @@ class ImportController extends Controller
                         'status' => $commission['status'],
                         'customer_language' => $commission['customerLanguage'],
                         'reference_id' => $commission['referenceId'],
+                        'affiliate_id' => $commission['affiliateId'] ?? null,
                     ]);
                 } else {
                     $unmatchedRows[] = [
@@ -327,6 +329,63 @@ class ImportController extends Controller
 
         return redirect()->route('imports.index')
             ->with('success', "{$count} import(s) verwijderd.");
+    }
+
+    public function backfillAffiliateIds(Request $request)
+    {
+        $request->validate(['csv_file' => 'required|file|mimes:csv,txt']);
+
+        $path        = $request->file('csv_file')->getRealPath();
+        $fileContent = file_get_contents($path);
+        $encoding    = mb_detect_encoding($fileContent, ['UTF-8', 'UTF-16', 'ISO-8859-1'], true);
+        if ($encoding !== 'UTF-8') {
+            $fileContent = mb_convert_encoding($fileContent, 'UTF-8', $encoding);
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'bkng_');
+        file_put_contents($tempPath, $fileContent);
+
+        $data = [];
+        if (($handle = fopen($tempPath, 'r')) !== false) {
+            while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
+                $data[] = $row;
+            }
+            fclose($handle);
+        }
+        unlink($tempPath);
+
+        $header = array_shift($data);
+
+        if (!in_array('Booking number', $header) || !in_array('Affiliate ID', $header)) {
+            return back()->withErrors(['csv_file' => 'CSV moet kolommen "Booking number" en "Affiliate ID" bevatten.']);
+        }
+
+        $updated  = 0;
+        $notFound = 0;
+        $skipped  = 0;
+
+        foreach ($data as $row) {
+            if (count($row) !== count($header)) continue;
+            $rowData     = array_combine($header, $row);
+            $bookingNr   = $rowData['Booking number'] ?? null;
+            $affiliateId = $rowData['Affiliate ID'] ?? null;
+
+            if (!$bookingNr || !$affiliateId) { $skipped++; continue; }
+
+            $count = Commission::where('reference_id', $bookingNr)
+                ->whereNull('affiliate_id')
+                ->update(['affiliate_id' => $affiliateId]);
+
+            if ($count > 0) {
+                $updated++;
+            } else {
+                Commission::where('reference_id', $bookingNr)->exists()
+                    ? $skipped++   // already had an affiliate_id
+                    : $notFound++;
+            }
+        }
+
+        return back()->with('success', "{$updated} commissies bijgewerkt, {$skipped} al ingevuld, {$notFound} niet gevonden.");
     }
 
     public function breakdown(Import $import)

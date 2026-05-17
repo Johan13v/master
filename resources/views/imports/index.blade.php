@@ -113,6 +113,26 @@
             </div>
         @endforelse
 
+        {{-- Backfill Booking.com affiliate IDs --}}
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6 flex items-center justify-between gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700">Booking.com affiliate IDs bijvullen</h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Upload een Booking.com export (met "Affiliate ID" kolom) om bestaande commissies bij te werken op basis van het boekingsnummer.
+                    </p>
+                </div>
+                <form action="{{ route('imports.backfillAffiliateIds') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-3 shrink-0">
+                    @csrf
+                    <input type="file" name="csv_file" accept=".csv,.txt" required
+                           class="text-sm text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-sm file:bg-white file:text-gray-700 hover:file:border-indigo-400">
+                    <button type="submit" class="bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-medium py-1.5 px-4 rounded">
+                        Bijvullen
+                    </button>
+                </form>
+            </div>
+        </div>
+
     </div>
 </div>
 @endsection

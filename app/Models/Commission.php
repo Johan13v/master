@@ -19,7 +19,8 @@ class Commission extends Model
         'order_date',
         'status',
         'customer_language',
-        'reference_id'
+        'reference_id',
+        'affiliate_id',
     ];
 
     public function city()

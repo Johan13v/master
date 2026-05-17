@@ -35,6 +35,22 @@
                     <input type="date" id="end_date" value="{{ $endDate }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </div>
 
+                {{-- Entity toggles --}}
+                <div class="mb-6">
+                    <p class="text-xs text-gray-400 mb-2">Klik om te verbergen:</p>
+                    <div id="entity-toggles" class="flex flex-wrap gap-2">
+                        @php $entities = $viewMode === 'website' ? $websites : $cities; @endphp
+                        @foreach($entities as $entity)
+                            <button type="button"
+                                    data-entity="{{ $entity->title }}"
+                                    onclick="toggleEntity(this)"
+                                    class="entity-toggle px-3 py-1 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:border-indigo-400 transition-colors">
+                                {{ $entity->title }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
                 <div class="chart-container">
                     <h3 class="text-lg font-medium text-gray-700">Total Revenue</h3>
                     <canvas id="totalRevenueChart"></canvas>
@@ -171,6 +187,40 @@ const borderColors = [
         const ctx = document.getElementById(`revenueChart${stream.id}`).getContext('2d');
         createChart(ctx, revenueDataByStream[stream.id], labels);
     });
+
+    // Restore hidden state from localStorage
+    const storageKey = 'dashboard-hidden-{{ $viewMode }}';
+    const hidden = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    document.querySelectorAll('.entity-toggle').forEach(btn => {
+        if (hidden.includes(btn.dataset.entity)) {
+            btn.classList.add('opacity-40', 'line-through');
+            setDatasetVisibility(btn.dataset.entity, false);
+        }
+    });
+
+    window.toggleEntity = function(btn) {
+        const entity = btn.dataset.entity;
+        const isHidden = btn.classList.toggle('opacity-40');
+        btn.classList.toggle('line-through');
+        setDatasetVisibility(entity, !isHidden);
+
+        const current = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const updated = isHidden
+            ? [...new Set([...current, entity])]
+            : current.filter(e => e !== entity);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+    };
+
+    function setDatasetVisibility(entityName, visible) {
+        Chart.instances.forEach(chart => {
+            chart.data.datasets.forEach((ds, i) => {
+                if (ds.label === entityName) {
+                    chart.setDatasetVisibility(i, visible);
+                }
+            });
+            chart.update();
+        });
+    }
 });
 </script>
 @endsection
