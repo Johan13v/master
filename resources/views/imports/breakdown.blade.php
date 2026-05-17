@@ -54,13 +54,13 @@
                                     <div>{{ $sample }}</div>
                                 @endforeach
                                 @if($group['samples']->count() > 5)
-                                    <div class="hidden" data-extra-{{ $loop->parent->index }}>
+                                    <div class="hidden" data-extra-{{ $loop->index }}>
                                         @foreach($group['samples']->slice(5) as $sample)
                                             <div>{{ $sample }}</div>
                                         @endforeach
                                     </div>
                                     <button type="button"
-                                            onclick="toggleExtra({{ $loop->parent->index }}, this)"
+                                            onclick="toggleExtra({{ $loop->index }}, this)"
                                             class="mt-1 text-indigo-500 hover:text-indigo-700 text-xs underline">
                                         +{{ $group['samples']->count() - 5 }} meer
                                     </button>
