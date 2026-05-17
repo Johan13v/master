@@ -42,6 +42,7 @@ Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('i
 Route::delete('imports-by-month', [ImportController::class, 'destroyByMonth'])->name('imports.destroyByMonth');
 Route::get('imports/{import}/breakdown', [ImportController::class, 'breakdown'])->name('imports.breakdown');
 Route::post('imports/{import}/reassign', [ImportController::class, 'reassign'])->name('imports.reassign');
+Route::post('commissions/{commission}/reassign', [ImportController::class, 'reassignCommission'])->name('commissions.reassign');
 
 Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets.sync');
 Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');

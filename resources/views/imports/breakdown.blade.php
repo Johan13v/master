@@ -25,7 +25,7 @@
                 <h3 class="text-lg font-medium text-gray-700 mb-1">Commissies per stad</h3>
                 <p class="text-sm text-gray-500 mb-6">
                     Totaal {{ $import->commissions()->count() }} commissies.
-                    Klik op "Herindelen" om commissies van een verkeerde stad naar de juiste te verplaatsen.
+                    Gebruik "Verplaats alles" om alle commissies van een stad te verplaatsen, of verplaats individuele hotels via de uitklaplijst.
                 </p>
 
                 @if($byCity->isEmpty())
@@ -37,12 +37,13 @@
                             <th class="pb-2 pr-6">Stad</th>
                             <th class="pb-2 pr-6">Aantal</th>
                             <th class="pb-2 pr-6">Bedrag</th>
-                            <th class="pb-2 pr-6">Voorbeelden</th>
-                            <th class="pb-2">Herindelen naar</th>
+                            <th class="pb-2 pr-6">Hotels</th>
+                            <th class="pb-2">Verplaats alles naar</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($byCity as $cityId => $group)
+                        @php $idx = $loop->index; @endphp
                         <tr>
                             <td class="py-3 pr-6 font-medium text-gray-800 align-top">
                                 {{ $group['city']?->title ?? '— onbekend —' }}
@@ -50,19 +51,74 @@
                             <td class="py-3 pr-6 text-gray-600 align-top">{{ $group['count'] }}</td>
                             <td class="py-3 pr-6 text-gray-600 align-top">€{{ number_format($group['amount'], 2, ',', '.') }}</td>
                             <td class="py-3 pr-6 text-gray-400 text-xs align-top">
-                                @foreach($group['samples']->take(5) as $sample)
-                                    <div>{{ $sample }}</div>
+                                {{-- First 5 hotels --}}
+                                @foreach($group['commissions']->take(5) as $commission)
+                                    <div class="flex items-center gap-2 py-0.5">
+                                        <span>{{ $commission->title }}</span>
+                                        <button type="button"
+                                                onclick="toggleSingleForm('form-{{ $commission->id }}')"
+                                                class="text-indigo-400 hover:text-indigo-600 text-xs underline shrink-0">
+                                            verplaats
+                                        </button>
+                                        <form id="form-{{ $commission->id }}"
+                                              action="{{ route('commissions.reassign', $commission) }}"
+                                              method="POST"
+                                              class="hidden flex items-center gap-1 mt-1">
+                                            @csrf
+                                            <select name="city_id"
+                                                    class="border-gray-300 rounded text-xs py-0.5 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                                <option value="">— kies stad —</option>
+                                                @foreach($cities as $city)
+                                                    @if($city->id !== $cityId)
+                                                        <option value="{{ $city->id }}">{{ $city->title }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                            <button type="submit"
+                                                    class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded border border-indigo-300">
+                                                OK
+                                            </button>
+                                        </form>
+                                    </div>
                                 @endforeach
-                                @if($group['samples']->count() > 5)
-                                    <div class="hidden" data-extra-{{ $loop->index }}>
-                                        @foreach($group['samples']->slice(5) as $sample)
-                                            <div>{{ $sample }}</div>
+
+                                {{-- Remaining hotels, hidden by default --}}
+                                @if($group['commissions']->count() > 5)
+                                    <div class="hidden" id="extra-{{ $idx }}">
+                                        @foreach($group['commissions']->slice(5) as $commission)
+                                            <div class="flex items-center gap-2 py-0.5">
+                                                <span>{{ $commission->title }}</span>
+                                                <button type="button"
+                                                        onclick="toggleSingleForm('form-{{ $commission->id }}')"
+                                                        class="text-indigo-400 hover:text-indigo-600 text-xs underline shrink-0">
+                                                    verplaats
+                                                </button>
+                                                <form id="form-{{ $commission->id }}"
+                                                      action="{{ route('commissions.reassign', $commission) }}"
+                                                      method="POST"
+                                                      class="hidden flex items-center gap-1 mt-1">
+                                                    @csrf
+                                                    <select name="city_id"
+                                                            class="border-gray-300 rounded text-xs py-0.5 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                                        <option value="">— kies stad —</option>
+                                                        @foreach($cities as $city)
+                                                            @if($city->id !== $cityId)
+                                                                <option value="{{ $city->id }}">{{ $city->title }}</option>
+                                                            @endif
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="submit"
+                                                            class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded border border-indigo-300">
+                                                        OK
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @endforeach
                                     </div>
                                     <button type="button"
-                                            onclick="toggleExtra({{ $loop->index }}, this)"
+                                            onclick="toggleExtra({{ $idx }}, this)"
                                             class="mt-1 text-indigo-500 hover:text-indigo-700 text-xs underline">
-                                        +{{ $group['samples']->count() - 5 }} meer
+                                        +{{ $group['commissions']->count() - 5 }} meer
                                     </button>
                                 @endif
                             </td>
@@ -82,7 +138,7 @@
                                     </select>
                                     <button type="submit"
                                             class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-medium px-3 py-1 rounded border border-indigo-300">
-                                        Verplaats
+                                        Verplaats alles
                                     </button>
                                 </form>
                                 @endif
@@ -101,9 +157,14 @@
 @push('scripts')
 <script>
 function toggleExtra(index, btn) {
-    const el = document.querySelector('[data-extra-' + index + ']');
+    const el = document.getElementById('extra-' + index);
     const hidden = el.classList.toggle('hidden');
-    btn.textContent = hidden ? '+' + el.children.length + ' meer' : 'Minder';
+    btn.textContent = hidden ? '+' + el.querySelectorAll('.flex').length + ' meer' : 'Minder';
+}
+
+function toggleSingleForm(id) {
+    const form = document.getElementById(id);
+    form.classList.toggle('hidden');
 }
 </script>
 @endpush

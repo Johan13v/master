@@ -29,41 +29,49 @@
                 </div>
 
                 <div class="space-y-4">
-                    @foreach($groups as $groupKey => $groupImports)
-                    @php
-                        $isApiGroup = (bool) preg_match('/^\d{4}$/', $groupKey);
-                        $importIds = $groupImports->pluck('id')->toArray();
-                        $totalCommissions = $groupImports->sum(fn($i) => $i->commissions->count());
-                        $totalAmount = $groupImports->sum(fn($i) => $i->commissions->sum('amount'));
-                        $isBooking = stripos($streamName, 'booking') !== false;
-                    @endphp
+                    @foreach($groups as $groupKey => $groupContent)
+                    @php $isApiGroup = (bool) preg_match('/^\d{4}$/', $groupKey); @endphp
 
                     @if($isApiGroup)
-                        {{-- API stream: one summary row per year --}}
+                        {{-- API stream: year → months --}}
                         <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-semibold text-gray-600 uppercase tracking-wide">{{ $groupKey }}</span>
-                                <form action="{{ route('imports.destroyByMonth') }}" method="POST"
-                                      onsubmit="return confirm('Alle imports van {{ $groupKey }} en bijbehorende commissies verwijderen?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    @foreach($importIds as $id)
-                                        <input type="hidden" name="import_ids[]" value="{{ $id }}">
-                                    @endforeach
-                                    <button type="submit" class="text-red-400 hover:text-red-600 text-xs">
-                                        Verwijder jaar
-                                    </button>
-                                </form>
-                            </div>
-                            <div class="text-sm text-gray-600 bg-gray-50 rounded px-4 py-3 flex items-center gap-8">
-                                <span>{{ $groupImports->count() }} dag(en) geïmporteerd</span>
-                                <span>{{ $totalCommissions }} commissies</span>
-                                <span>€{{ number_format($totalAmount, 2, ',', '.') }}</span>
+                            <div class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">{{ $groupKey }}</div>
+                            <div class="space-y-2 pl-2">
+                                @foreach($groupContent as $month => $monthImports)
+                                @php
+                                    $label = \Carbon\Carbon::createFromFormat('Y-m', $month)->translatedFormat('F Y');
+                                    $importIds = $monthImports->pluck('id')->toArray();
+                                    $totalCommissions = $monthImports->sum(fn($i) => $i->commissions->count());
+                                    $totalAmount = $monthImports->sum(fn($i) => $i->commissions->sum('amount'));
+                                @endphp
+                                <div class="flex items-center justify-between bg-gray-50 rounded px-4 py-2">
+                                    <div class="flex items-center gap-6 text-sm text-gray-600">
+                                        <span class="font-medium text-gray-700 w-32">{{ $label }}</span>
+                                        <span>{{ $monthImports->count() }} dag(en)</span>
+                                        <span>{{ $totalCommissions }} commissies</span>
+                                        <span>€{{ number_format($totalAmount, 2, ',', '.') }}</span>
+                                    </div>
+                                    <form action="{{ route('imports.destroyByMonth') }}" method="POST"
+                                          onsubmit="return confirm('Alle imports van {{ $label }} verwijderen?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        @foreach($importIds as $id)
+                                            <input type="hidden" name="import_ids[]" value="{{ $id }}">
+                                        @endforeach
+                                        <button type="submit" class="text-red-400 hover:text-red-600 text-xs">
+                                            Verwijder
+                                        </button>
+                                    </form>
+                                </div>
+                                @endforeach
                             </div>
                         </div>
                     @else
                         {{-- Manual import: individual row --}}
-                        @php $import = $groupImports->first(); @endphp
+                        @php
+                            $import = $groupContent->first();
+                            $isBooking = stripos($streamName, 'booking') !== false;
+                        @endphp
                         <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                             <div class="flex items-center gap-6">
                                 <span class="text-gray-800 text-sm">{{ $import->title }}</span>

@@ -29,7 +29,12 @@ class ImportController extends Controller
                             return $m[1];
                         }
                         return $i->created_at->format('Y');
-                    });
+                    })->map(fn($yearImports) => $yearImports->groupBy(function ($i) {
+                        if (preg_match('/(\d{4}-\d{2})-\d{2}/', $i->title, $m)) {
+                            return $m[1];
+                        }
+                        return $i->created_at->format('Y-m');
+                    }));
                 }
 
                 return $streamImports->groupBy('id');
@@ -331,10 +336,10 @@ class ImportController extends Controller
             ->groupBy('city_id')
             ->map(function ($group) {
                 return [
-                    'city'    => $group->first()->city,
-                    'count'   => $group->count(),
-                    'amount'  => $group->sum('amount'),
-                    'samples' => $group->pluck('title'),
+                    'city'        => $group->first()->city,
+                    'count'       => $group->count(),
+                    'amount'      => $group->sum('amount'),
+                    'commissions' => $group->values(),
                 ];
             })
             ->sortByDesc('count');
@@ -357,6 +362,19 @@ class ImportController extends Controller
 
         return redirect()->route('imports.breakdown', $import)
             ->with('success', "{$count} commissies verplaatst.");
+    }
+
+    public function reassignCommission(Request $request, Commission $commission)
+    {
+        $request->validate([
+            'city_id' => 'required|integer|exists:cities,id',
+        ]);
+
+        $city = City::find($request->city_id);
+        $commission->update(['city_id' => $request->city_id]);
+
+        return redirect()->route('imports.breakdown', $commission->import_id)
+            ->with('success', "'{$commission->title}' verplaatst naar {$city->title}.");
     }
 
     public function destroy(Import $import)
