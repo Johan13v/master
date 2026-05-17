@@ -365,7 +365,7 @@ class ImportController extends Controller
         foreach ($data as $row) {
             if (count($row) !== count($header)) continue;
             $rowData     = array_combine($header, $row);
-            $bookingNr   = trim($rowData['Booking number'] ?? '');
+            $bookingNr   = ltrim(trim($rowData['Booking number'] ?? ''), '#');
             $affiliateId = trim($rowData['Affiliate ID'] ?? '');
             if ($bookingNr && $affiliateId) {
                 $mapping[$bookingNr] = $affiliateId;
