@@ -646,17 +646,17 @@ class ImportController extends Controller
     {
         foreach ($cities as $c) {
             foreach ($c->matchers as $matcher) {
-                if (strpos($commission['cityName'], $matcher) !== false) {
+                if (stripos($commission['cityName'], $matcher) !== false) {
                     $commission['city'] = $c;
                     break 2;
                 }
             }
         }
 
-        if($commission['city'] == null) {
+        if ($commission['city'] == null) {
             foreach ($cities as $c) {
                 foreach ($c->matchers as $matcher) {
-                    if (strpos($commission['product'], $matcher) !== false) {
+                    if (stripos($commission['product'], $matcher) !== false) {
                         $commission['city'] = $c;
                         break 2;
                     }

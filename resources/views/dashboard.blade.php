@@ -180,12 +180,14 @@ const borderColors = [
 
     const labels = Object.keys(totalRevenueData).length > 0 ? totalRevenueData[Object.keys(totalRevenueData)[0]].data.map(d => d.date) : [];
 
+    const allCharts = [];
+
     const totalRevenueCtx = document.getElementById('totalRevenueChart').getContext('2d');
-    createChart(totalRevenueCtx, totalRevenueData, labels);
+    allCharts.push(createChart(totalRevenueCtx, totalRevenueData, labels));
 
     revenueStreams.forEach(stream => {
         const ctx = document.getElementById(`revenueChart${stream.id}`).getContext('2d');
-        createChart(ctx, revenueDataByStream[stream.id], labels);
+        allCharts.push(createChart(ctx, revenueDataByStream[stream.id], labels));
     });
 
     // Restore hidden state from localStorage
@@ -212,7 +214,8 @@ const borderColors = [
     };
 
     function setDatasetVisibility(entityName, visible) {
-        Chart.instances.forEach(chart => {
+        allCharts.forEach(chart => {
+            if (!chart) return;
             chart.data.datasets.forEach((ds, i) => {
                 if (ds.label === entityName) {
                     chart.setDatasetVisibility(i, visible);
