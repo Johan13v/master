@@ -109,6 +109,7 @@ class ImportController extends Controller
                     $commission['customerLanguage'] = $rowData['Booker language'];
                     $commission['cityName'] = $rowData['City'];
                     $commission['country'] = $rowData['Country'];
+                    $commission['ufi'] = $rowData['UFI'] ?? null;
                     $commission['status'] = $this->processStatus($rowData['Status']);
                 } elseif ($request->csv_type == 'tradetracker') {
                     $commission['referenceId'] = $rowData['ID'];
@@ -271,6 +272,10 @@ class ImportController extends Controller
             }
         });
 
+        if ($importId) {
+            \App\Models\Import::where('id', $importId)->update(['unmatched_count' => 0]);
+        }
+
         $returnTo = $request->input('return_to');
         if ($returnTo && str_starts_with($returnTo, url('/'))) {
             return redirect($returnTo)->with('success', 'Matchers opgeslagen en commissies geïmporteerd.');
@@ -330,63 +335,69 @@ class ImportController extends Controller
 
     public function matchBooking($commission, $cities, $websites)
     {
-        // Special cases for cities
-        if ($commission['cityName'] == 'Paris') {
-            $commission['city'] = City::whereJsonContains('matchers', 'Paris')->first();
-            if ($commission['customerLanguage'] == 'DE') {
-                $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
-            } else {
-                $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaarparijs')->first();
-            }
-        } elseif ($commission['country'] == 'PT' && !in_array($commission['cityName'], ['Lisboa', 'Sintra'])) {
-            $commission['city'] = City::whereJsonContains('matchers', 'Azoren')->first();
-            if ($commission['customerLanguage'] == 'DE') {
-                $commission['website'] = Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first();
-            } else {
-                $commission['website'] = Website::whereJsonContains('matchers', 'De-azoren')->first();
-            }
-        } elseif ($commission['country'] == 'IS') {
-            $commission['city'] = City::whereJsonContains('matchers', 'IJsland')->first();
-            $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();
-        } else {
-            // Default case for other city matchers
+        $ufi = $commission['ufi'] ?? null;
+        $country = $commission['country'] ?? null;
+        $cityName = $commission['cityName'] ?? '';
+        $isGerman = $commission['customerLanguage'] === 'DE';
+
+        // 1. UFI match — most specific, distinguishes regions within same country
+        //    (e.g. Sardinia vs Sicily vs Rome, Madeira vs Azores)
+        if ($ufi) {
             foreach ($cities as $c) {
-                foreach ($c->matchers as $matcher) {
-                    if (strpos($commission['cityName'], $matcher) !== false) {
+                if (!empty($c->ufis) && in_array((string) $ufi, array_map('strval', $c->ufis))) {
+                    $commission['city'] = $c;
+                    break;
+                }
+            }
+        }
+
+        // 2. City-name matchers — catches named cities stored in matchers (Paris, Oslo, Lisboa, etc.)
+        if (!$commission['city']) {
+            foreach ($cities as $c) {
+                foreach ($c->matchers ?? [] as $matcher) {
+                    if (stripos($cityName, $matcher) !== false) {
                         $commission['city'] = $c;
                         break 2;
                     }
                 }
             }
+        }
 
-            // Default case for website matchers
-            if (!$commission['website']) {
-                foreach ($websites as $web) {
-                    foreach ($web->matchers as $matcher) {
-                        if (strpos($commission['product'], $matcher) !== false) {
-                            $commission['website'] = $web;
-                            break 2;
-                        }
-                    }
+        // 3. Country-code match — for destinations that are a whole country
+        //    (Japan → JP, Sri Lanka → LK, Iceland → IS, etc.)
+        if (!$commission['city'] && $country) {
+            foreach ($cities as $c) {
+                if (!empty($c->country_codes) && in_array($country, $c->country_codes)) {
+                    $commission['city'] = $c;
+                    break;
                 }
             }
         }
 
-        // Ensure website defaults to Wegwijsnaar if still null
-        if($commission['country'] == 'FR' && $commission['city'] == null) {
+        // 4. Portugal fallback: anything PT not already matched → Azores
+        if (!$commission['city'] && $country === 'PT') {
+            $commission['city'] = City::whereJsonContains('matchers', 'Azoren')->first();
+        }
+
+        // 5. France fallback: anything FR not already matched → Paris
+        if (!$commission['city'] && $country === 'FR') {
             $commission['city'] = City::whereJsonContains('matchers', 'Paris')->first();
-            if ($commission['customerLanguage'] == 'DE') {
-                $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
-            } else {
-                $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaarparijs')->first();
-            }
-        } else if (!$commission['website']) {
-            if ($commission['customerLanguage'] == 'DE') {
-                if($commission['city'] == null) {
-                    $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
-                } else {
-                    $commission['website'] = Website::whereJsonContains('matchers', 'dasfreiheitsgefuhl')->first();
-                }
+        }
+
+        // Website resolution
+        $city = $commission['city'];
+
+        if ($city && $city->title === 'Parijs') {
+            $commission['website'] = $isGerman
+                ? Website::whereJsonContains('matchers', 'Nachparis')->first()
+                : Website::whereJsonContains('matchers', 'Wegwijsnaarparijs')->first();
+        } elseif ($city && $city->title === 'Azoren') {
+            $commission['website'] = $isGerman
+                ? Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first()
+                : Website::whereJsonContains('matchers', 'De-azoren')->first();
+        } elseif (!$commission['website']) {
+            if ($isGerman) {
+                $commission['website'] = Website::whereJsonContains('matchers', 'dasfreiheitsgefuhl')->first();
             } else {
                 $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();
             }

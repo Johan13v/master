@@ -32,12 +32,11 @@ class TiqetsSyncController extends Controller
             ->orderByRaw("month DESC")
             ->get();
 
-        // Imports met 0 commissies = ongematchte orders wachten op handmatige koppeling
         $unmatchedDays = Import::where('title', 'like', 'Tiqets API - %')
-            ->whereDoesntHave('commissions')
+            ->where(fn($q) => $q->whereDoesntHave('commissions')->orWhere('unmatched_count', '>', 0))
             ->orderByDesc('title')
             ->get()
-            ->map(fn($i) => substr($i->title, 13)); // "Tiqets API - 2026-05-01" → "2026-05-01"
+            ->map(fn($i) => substr($i->title, 13));
 
         return view('tiqets.sync', compact('revenueStream', 'monthlyStats', 'unmatchedDays'));
     }

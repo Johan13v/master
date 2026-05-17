@@ -30,10 +30,10 @@ class AdSenseSyncController extends Controller
             ->get();
 
         $unmatchedDays = Import::where('title', 'like', 'AdSense API - %')
-            ->whereDoesntHave('commissions')
+            ->where(fn($q) => $q->whereDoesntHave('commissions')->orWhere('unmatched_count', '>', 0))
             ->orderByDesc('title')
             ->get()
-            ->map(fn($i) => substr($i->title, 14)); // "AdSense API - 2026-05-01" → "2026-05-01"
+            ->map(fn($i) => substr($i->title, 14));
 
         return view('adsense.sync', [
             'connected'     => $this->adSense->isConnected(),

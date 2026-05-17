@@ -12,9 +12,13 @@ class City extends Model
     protected $fillable = [
         'title',
         'matchers',
+        'country_codes',
+        'ufis',
     ];
 
     protected $casts = [
         'matchers' => 'array',
+        'country_codes' => 'array',
+        'ufis' => 'array',
     ];
 }

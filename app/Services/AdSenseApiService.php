@@ -196,6 +196,8 @@ class AdSenseApiService
             }
         });
 
+        $import->update(['unmatched_count' => count($unmatchedRows)]);
+
         return [
             'created'      => $created,
             'skipped'      => $skipped,

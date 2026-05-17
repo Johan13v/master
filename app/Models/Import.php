@@ -12,6 +12,7 @@ class Import extends Model
     protected $fillable = [
         'revenue_stream_id',
         'title',
+        'unmatched_count',
     ];
 
     public function commissions()

@@ -28,7 +28,7 @@ class TradeTrackerSyncController extends Controller
             ->get();
 
         $unmatchedDays = Import::where('title', 'like', 'TradeTracker API - %')
-            ->whereDoesntHave('commissions')
+            ->where(fn($q) => $q->whereDoesntHave('commissions')->orWhere('unmatched_count', '>', 0))
             ->orderByDesc('title')
             ->get()
             ->map(fn($i) => substr($i->title, 18));
