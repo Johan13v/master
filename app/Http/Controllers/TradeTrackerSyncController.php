@@ -28,7 +28,7 @@ class TradeTrackerSyncController extends Controller
             ->get();
 
         $unmatchedDays = Import::where('title', 'like', 'TradeTracker API - %')
-            ->where(fn($q) => $q->whereDoesntHave('commissions')->orWhere('unmatched_count', '>', 0))
+            ->where('unmatched_count', '>', 0)
             ->orderByDesc('title')
             ->get()
             ->map(fn($i) => substr($i->title, 18));
@@ -114,7 +114,7 @@ class TradeTrackerSyncController extends Controller
             ]);
         }
 
-        $remaining = Import::where('title', 'like', 'TradeTracker API - %')->whereDoesntHave('commissions')->count();
+        $remaining = Import::where('title', 'like', 'TradeTracker API - %')->where('unmatched_count', '>', 0)->count();
         $msg = "{$result['created']} commissies aangemaakt.";
         if ($remaining > 0) $msg .= " Nog {$remaining} dag(en) wachten op koppeling.";
 
