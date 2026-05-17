@@ -45,9 +45,9 @@ return [
     ],
 
     'tradetracker' => [
-        'customer_id' => env('TRADETRACKER_CUSTOMER_ID'),
-        'passphrase'  => env('TRADETRACKER_PASSPHRASE'),
-        'wsdl'        => 'http://api.tradetracker.com/soap?wsdl',
+        'customer_id'       => env('TRADETRACKER_CUSTOMER_ID'),
+        'passphrase'        => env('TRADETRACKER_PASSPHRASE'),
+        'affiliate_site_ids' => env('TRADETRACKER_AFFILIATE_SITE_IDS'),
     ],
 
     'tiqets' => [

@@ -14,13 +14,14 @@ class TradeTrackerApiService
 {
     private int $customerId;
     private ?string $passphrase;
-    private ?string $wsdl;
+    private array $affiliateSiteIds;
 
     public function __construct()
     {
-        $this->customerId = (int) config('services.tradetracker.customer_id');
-        $this->passphrase = config('services.tradetracker.passphrase');
-        $this->wsdl       = config('services.tradetracker.wsdl');
+        $this->customerId      = (int) config('services.tradetracker.customer_id');
+        $this->passphrase      = config('services.tradetracker.passphrase');
+        $raw                   = config('services.tradetracker.affiliate_site_ids', '');
+        $this->affiliateSiteIds = array_filter(array_map('trim', explode(',', $raw)));
     }
 
     public function isConfigured(): bool
@@ -115,52 +116,57 @@ class TradeTrackerApiService
 
     public function fetchTransactions(string $startDate, string $endDate): array
     {
-        try {
-            $client = $this->client();
+        $options = [
+            'registrationDateFrom' => Carbon::parse($startDate)->startOfDay()->timestamp,
+            'registrationDateTo'   => Carbon::parse($endDate)->endOfDay()->timestamp,
+        ];
 
-            $options = [
-                'registrationDateFrom' => Carbon::parse($startDate)->startOfDay()->timestamp,
-                'registrationDateTo'   => Carbon::parse($endDate)->endOfDay()->timestamp,
-            ];
+        $all = [];
 
-            $result = $client->getConversionTransactions(null, $options);
+        foreach ($this->affiliateSiteIds as $siteId) {
+            try {
+                $client = $this->client();
+                $result = $client->getConversionTransactions((int) $siteId, $options);
 
-            Log::debug('TradeTracker API response', [
-                'start'  => $startDate,
-                'end'    => $endDate,
-                'count'  => is_array($result) ? count($result) : 0,
-            ]);
-
-            if (empty($result)) {
-                return [];
-            }
-
-            return array_map(function ($tx) {
-                $status = $this->mapStatus($tx->transactionStatus ?? '');
-
-                Log::debug('TradeTracker transactie', [
-                    'id'       => $tx->ID ?? '',
-                    'campaign' => $tx->campaign->name ?? '',
-                    'site'     => $tx->affiliateSite->name ?? '',
-                    'status'   => $tx->transactionStatus ?? '',
-                    'amount'   => $tx->commission ?? 0,
+                Log::debug('TradeTracker API response', [
+                    'site_id' => $siteId,
+                    'start'   => $startDate,
+                    'end'     => $endDate,
+                    'count'   => is_array($result) ? count($result) : 0,
                 ]);
 
-                return [
-                    'referenceId'      => (string) ($tx->ID ?? ''),
-                    'product'          => $tx->campaign->name ?? '',
-                    'amount'           => (float) ($tx->commission ?? 0),
-                    'orderDate'        => Carbon::createFromTimestamp($tx->registrationDate ?? time())->format('Y-m-d H:i:s'),
-                    'customerLanguage' => $tx->country ?? '',
-                    'sitebrand'        => $tx->affiliateSite->name ?? '',
-                    'status'           => $status,
-                ];
-            }, (array) $result);
+                if (empty($result)) {
+                    continue;
+                }
 
-        } catch (\Exception $e) {
-            Log::error('TradeTracker SOAP fout', ['message' => $e->getMessage()]);
-            return [];
+                foreach ((array) $result as $tx) {
+                    $status = $this->mapStatus($tx->transactionStatus ?? '');
+
+                    Log::debug('TradeTracker transactie', [
+                        'id'       => $tx->ID ?? '',
+                        'campaign' => $tx->campaign->name ?? '',
+                        'site'     => $tx->affiliateSite->name ?? '',
+                        'status'   => $tx->transactionStatus ?? '',
+                        'amount'   => $tx->commission ?? 0,
+                    ]);
+
+                    $all[] = [
+                        'referenceId'      => (string) ($tx->ID ?? ''),
+                        'product'          => $tx->campaign->name ?? '',
+                        'amount'           => (float) ($tx->commission ?? 0),
+                        'orderDate'        => Carbon::createFromTimestamp($tx->registrationDate ?? time())->format('Y-m-d H:i:s'),
+                        'customerLanguage' => $tx->country ?? '',
+                        'sitebrand'        => $tx->affiliateSite->name ?? '',
+                        'status'           => $status,
+                    ];
+                }
+
+            } catch (\Exception $e) {
+                Log::error('TradeTracker SOAP fout', ['site_id' => $siteId, 'message' => $e->getMessage()]);
+            }
         }
+
+        return $all;
     }
 
     private function mapStatus(string $status): string
