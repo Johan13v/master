@@ -50,9 +50,21 @@
                             <td class="py-3 pr-6 text-gray-600 align-top">{{ $group['count'] }}</td>
                             <td class="py-3 pr-6 text-gray-600 align-top">€{{ number_format($group['amount'], 2, ',', '.') }}</td>
                             <td class="py-3 pr-6 text-gray-400 text-xs align-top">
-                                @foreach($group['samples'] as $sample)
+                                @foreach($group['samples']->take(5) as $sample)
                                     <div>{{ $sample }}</div>
                                 @endforeach
+                                @if($group['samples']->count() > 5)
+                                    <div class="hidden" data-extra-{{ $loop->parent->index }}>
+                                        @foreach($group['samples']->slice(5) as $sample)
+                                            <div>{{ $sample }}</div>
+                                        @endforeach
+                                    </div>
+                                    <button type="button"
+                                            onclick="toggleExtra({{ $loop->parent->index }}, this)"
+                                            class="mt-1 text-indigo-500 hover:text-indigo-700 text-xs underline">
+                                        +{{ $group['samples']->count() - 5 }} meer
+                                    </button>
+                                @endif
                             </td>
                             <td class="py-3 align-top">
                                 @if($group['city'])
@@ -85,4 +97,14 @@
 
     </div>
 </div>
+
+@push('scripts')
+<script>
+function toggleExtra(index, btn) {
+    const el = document.querySelector('[data-extra-' + index + ']');
+    const hidden = el.classList.toggle('hidden');
+    btn.textContent = hidden ? '+' + el.children.length + ' meer' : 'Minder';
+}
+</script>
+@endpush
 @endsection

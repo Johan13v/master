@@ -326,7 +326,7 @@ class ImportController extends Controller
                     'city'    => $group->first()->city,
                     'count'   => $group->count(),
                     'amount'  => $group->sum('amount'),
-                    'samples' => $group->take(5)->pluck('title'),
+                    'samples' => $group->pluck('title'),
                 ];
             })
             ->sortByDesc('count');
