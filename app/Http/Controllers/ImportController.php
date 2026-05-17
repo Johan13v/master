@@ -508,7 +508,7 @@ class ImportController extends Controller
             if ($commission['referenceId'] == 'mietwagenAzoren') {
                 $commission['website'] = Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first();
             }
-        } elseif ($commission['website'] != null && $commission['website']->title == 'Wegwijs naar Parijs') {
+        } elseif ($commission['website'] != null && in_array($commission['website']->title, ['Wegwijs naar Parijs', 'NachParis'])) {
             $commission['city'] = City::whereJsonContains('matchers', 'Paris')->first();
         } else {
             // Default case for other matchers

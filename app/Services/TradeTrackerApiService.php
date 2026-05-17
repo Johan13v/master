@@ -180,7 +180,7 @@ class TradeTrackerApiService
 
         if ($commission['website'] !== null && $commission['website']->title == 'De Azoren') {
             $commission['city'] = City::whereJsonContains('matchers', 'Azoren')->first();
-        } elseif ($commission['website'] !== null && $commission['website']->title == 'Wegwijs naar Parijs') {
+        } elseif ($commission['website'] !== null && in_array($commission['website']->title, ['Wegwijs naar Parijs', 'NachParis'])) {
             $commission['city'] = City::whereJsonContains('matchers', 'Paris')->first();
         } else {
             foreach ($websites as $web) {
