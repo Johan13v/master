@@ -360,28 +360,46 @@ class ImportController extends Controller
             return back()->withErrors(['csv_file' => 'CSV moet kolommen "Booking number" en "Affiliate ID" bevatten.']);
         }
 
+        // Build reference_id → affiliate_id mapping from CSV (one pass, no DB queries yet)
+        $mapping = [];
+        foreach ($data as $row) {
+            if (count($row) !== count($header)) continue;
+            $rowData     = array_combine($header, $row);
+            $bookingNr   = trim($rowData['Booking number'] ?? '');
+            $affiliateId = trim($rowData['Affiliate ID'] ?? '');
+            if ($bookingNr && $affiliateId) {
+                $mapping[$bookingNr] = $affiliateId;
+            }
+        }
+
         $updated  = 0;
         $notFound = 0;
         $skipped  = 0;
 
-        foreach ($data as $row) {
-            if (count($row) !== count($header)) continue;
-            $rowData     = array_combine($header, $row);
-            $bookingNr   = $rowData['Booking number'] ?? null;
-            $affiliateId = $rowData['Affiliate ID'] ?? null;
+        // Group reference_ids by affiliate_id so we can do one bulk update per affiliate
+        $byAffiliate = [];
+        foreach ($mapping as $refId => $affId) {
+            $byAffiliate[$affId][] = $refId;
+        }
 
-            if (!$bookingNr || !$affiliateId) { $skipped++; continue; }
+        foreach ($byAffiliate as $affiliateId => $refIds) {
+            // Chunk to keep individual WHERE IN clauses manageable
+            foreach (array_chunk($refIds, 500) as $chunk) {
+                $updated += DB::table('commissions')
+                    ->whereIn('reference_id', $chunk)
+                    ->whereNull('affiliate_id')
+                    ->update(['affiliate_id' => $affiliateId]);
 
-            $count = Commission::where('reference_id', $bookingNr)
-                ->whereNull('affiliate_id')
-                ->update(['affiliate_id' => $affiliateId]);
+                $skipped += DB::table('commissions')
+                    ->whereIn('reference_id', $chunk)
+                    ->whereNotNull('affiliate_id')
+                    ->count();
 
-            if ($count > 0) {
-                $updated++;
-            } else {
-                Commission::where('reference_id', $bookingNr)->exists()
-                    ? $skipped++   // already had an affiliate_id
-                    : $notFound++;
+                $found = DB::table('commissions')
+                    ->whereIn('reference_id', $chunk)
+                    ->count();
+
+                $notFound += count($chunk) - $found;
             }
         }
 
