@@ -383,19 +383,25 @@ class ImportController extends Controller
         $notFound = 0;
         $skipped  = 0;
 
-        // Group reference_ids by affiliate_id so we can do one bulk update per affiliate
+        // Group reference_ids by affiliate_id so we can do one bulk update per affiliate.
+        // PHP converts pure-numeric string array keys to integers; cast back to string
+        // so values stay as strings through array_chunk and into the PDO binding.
         $byAffiliate = [];
         foreach ($mapping as $refId => $affId) {
-            $byAffiliate[$affId][] = $refId;
+            $byAffiliate[(string) $affId][] = (string) $refId;
         }
 
         foreach ($byAffiliate as $affiliateId => $refIds) {
-            // Chunk to keep individual WHERE IN clauses manageable
+            // Chunk to keep individual WHERE IN clauses manageable.
+            // Cast to string so PDO sends quoted values — prevents MySQL from casting the
+            // varchar reference_id column to DOUBLE (which fails on values like '#8952520322').
             foreach (array_chunk($refIds, 500) as $chunk) {
+                $chunk = array_map('strval', $chunk);
+
                 $updated += DB::table('commissions')
                     ->whereIn('reference_id', $chunk)
                     ->whereNull('affiliate_id')
-                    ->update(['affiliate_id' => $affiliateId]);
+                    ->update(['affiliate_id' => (string) $affiliateId]);
 
                 $skipped += DB::table('commissions')
                     ->whereIn('reference_id', $chunk)
