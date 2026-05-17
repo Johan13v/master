@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Log;
 class TradeTrackerApiService
 {
     private int $customerId;
-    private string $passphrase;
-    private string $wsdl;
+    private ?string $passphrase;
+    private ?string $wsdl;
 
     public function __construct()
     {
@@ -30,10 +30,13 @@ class TradeTrackerApiService
 
     private function client(): \SoapClient
     {
-        $client = new \SoapClient($this->wsdl, [
+        $wsdl = resource_path('tradetracker.wsdl');
+
+        $client = new \SoapClient($wsdl, [
             'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
             'cache_wsdl'  => WSDL_CACHE_BOTH,
             'trace'       => true,
+            'location'    => 'https://ws.tradetracker.com/soap/affiliate',
         ]);
 
         $client->authenticate($this->customerId, $this->passphrase, 'nl_NL', false);
