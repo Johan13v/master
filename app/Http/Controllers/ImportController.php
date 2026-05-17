@@ -345,9 +345,13 @@ class ImportController extends Controller
         $tempPath = tempnam(sys_get_temp_dir(), 'bkng_');
         file_put_contents($tempPath, $fileContent);
 
+        // Auto-detect delimiter (Booking.com exports can be comma or tab separated)
+        $firstLine = strtok($fileContent, "\n");
+        $delimiter = substr_count($firstLine, "\t") > substr_count($firstLine, ',') ? "\t" : ',';
+
         $data = [];
         if (($handle = fopen($tempPath, 'r')) !== false) {
-            while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
+            while (($row = fgetcsv($handle, 0, $delimiter, '"')) !== false) {
                 $data[] = $row;
             }
             fclose($handle);
@@ -355,9 +359,11 @@ class ImportController extends Controller
         unlink($tempPath);
 
         $header = array_shift($data);
+        // Strip BOM / whitespace from header field names
+        $header = array_map(fn($h) => trim($h, " \t\r\n\xEF\xBB\xBF"), $header);
 
         if (!in_array('Booking number', $header) || !in_array('Affiliate ID', $header)) {
-            return back()->withErrors(['csv_file' => 'CSV moet kolommen "Booking number" en "Affiliate ID" bevatten.']);
+            return back()->withErrors(['csv_file' => 'CSV moet kolommen "Booking number" en "Affiliate ID" bevatten. Gevonden: ' . implode(', ', array_slice($header, 0, 5))]);
         }
 
         // Build reference_id → affiliate_id mapping from CSV (one pass, no DB queries yet)
@@ -365,8 +371,9 @@ class ImportController extends Controller
         foreach ($data as $row) {
             if (count($row) !== count($header)) continue;
             $rowData     = array_combine($header, $row);
+            // Strip leading # that Booking.com sometimes adds to both fields
             $bookingNr   = ltrim(trim($rowData['Booking number'] ?? ''), '#');
-            $affiliateId = trim($rowData['Affiliate ID'] ?? '');
+            $affiliateId = ltrim(trim($rowData['Affiliate ID'] ?? ''), '#');
             if ($bookingNr && $affiliateId) {
                 $mapping[$bookingNr] = $affiliateId;
             }
