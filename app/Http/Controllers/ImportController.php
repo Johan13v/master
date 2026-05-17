@@ -662,15 +662,19 @@ class ImportController extends Controller
 
     public function matchGetYourGuide($commission, $cities, $websites)
     {
+        // GYG provides exact city names — use exact case-insensitive match to avoid
+        // substring false positives (e.g. "Vienna" falsely matching the "Enna" Sicily matcher).
+        $gygCity = strtolower(trim($commission['cityName'] ?? ''));
         foreach ($cities as $c) {
             foreach ($c->matchers as $matcher) {
-                if (stripos($commission['cityName'], $matcher) !== false) {
+                if ($gygCity === strtolower(trim($matcher))) {
                     $commission['city'] = $c;
                     break 2;
                 }
             }
         }
 
+        // Fall back to substring match on the activity title for edge cases.
         if ($commission['city'] == null) {
             foreach ($cities as $c) {
                 foreach ($c->matchers as $matcher) {
