@@ -19,6 +19,7 @@
                    '07'=>'jul','08'=>'aug','09'=>'sep','10'=>'okt','11'=>'nov','12'=>'dec'];
 @endphp
 
+@section('content')
 <div class="py-12">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
