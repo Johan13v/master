@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\City;
 use App\Models\Import;
+use App\Models\Website;
+use App\Models\Commission;
 use App\Models\RevenueStream;
 use App\Services\TiqetsApiService;
 use Illuminate\Http\Request;
@@ -140,6 +143,45 @@ class TiqetsSyncController extends Controller
         }
 
         return redirect()->route('tiqets.sync')->with('success', $this->buildMessage($results));
+    }
+
+    public function correctMisassigned()
+    {
+        $paris = City::whereJsonContains('matchers', 'Parijs')->first();
+        $nachparis = Website::whereJsonContains('matchers', 'Nachparis')->first();
+        $wegwijs = Website::whereJsonContains('matchers', 'WegwijsnaarParijs')->first();
+
+        if (!$paris || !$nachparis || !$wegwijs) {
+            return redirect()->route('tiqets.sync')->with('error', 'Stad of website niet gevonden.');
+        }
+
+        $deLanguages = ['de', 'german', 'germany', 'deutsch'];
+
+        $count = Commission::where('city_id', $paris->id)
+            ->where('website_id', $wegwijs->id)
+            ->whereIn('customer_language', $deLanguages)
+            ->update(['website_id' => $nachparis->id]);
+
+        return redirect()->route('tiqets.sync')
+            ->with('success', "{$count} commissie(s) verplaatst van WegwijsnaarParijs naar NachParis (Parijs + Duits).");
+    }
+
+    public function previewCorrections()
+    {
+        $paris = City::whereJsonContains('matchers', 'Parijs')->first();
+        $nachparis = Website::whereJsonContains('matchers', 'Nachparis')->first();
+        $wegwijs = Website::whereJsonContains('matchers', 'WegwijsnaarParijs')->first();
+
+        if (!$paris || !$nachparis || !$wegwijs) {
+            return response()->json(['count' => 0, 'error' => 'Stad of website niet gevonden.']);
+        }
+
+        $count = Commission::where('city_id', $paris->id)
+            ->where('website_id', $wegwijs->id)
+            ->whereIn('customer_language', ['de', 'german', 'germany', 'deutsch'])
+            ->count();
+
+        return response()->json(['count' => $count]);
     }
 
     private function buildMessage(array $results): string

@@ -186,31 +186,39 @@ class TiqetsApiService
 
     private function matchTiqets(array $commission, $cities, $websites): array
     {
-        if ($commission['sitebrand'] == 'Wegwijsnaarparijs' && $commission['customerLanguage'] == 'de') {
-            $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
-        } elseif ($commission['sitebrand'] == 'De-azoren' && $commission['customerLanguage'] == 'de') {
-            $commission['website'] = Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first();
+        $sitebrand = strtolower($commission['sitebrand'] ?? '');
+        $lang      = strtolower($commission['customerLanguage'] ?? '');
+
+        // Website via sitebrand
+        foreach ($websites as $web) {
+            foreach ($web->matchers as $matcher) {
+                if (stripos($commission['sitebrand'], $matcher) !== false) {
+                    $commission['website'] = $web;
+                    break 2;
+                }
+            }
+        }
+
+        // City: sitebrand 'wegwijsnaarparijs' → always Paris
+        if ($sitebrand === 'wegwijsnaarparijs') {
+            $commission['city'] = City::whereJsonContains('matchers', 'Parijs')->first();
         } else {
-            foreach ($websites as $web) {
-                foreach ($web->matchers as $matcher) {
-                    if (strpos($commission['sitebrand'], $matcher) !== false) {
-                        $commission['website'] = $web;
+            foreach ($cities as $c) {
+                foreach ($c->matchers as $matcher) {
+                    if (stripos($commission['product'], $matcher) !== false) {
+                        $commission['city'] = $c;
                         break 2;
                     }
                 }
             }
         }
 
-        if ($commission['sitebrand'] == 'Wegwijsnaarparijs') {
-            $commission['city'] = City::whereJsonContains('matchers', 'Parijs')->first();
-        } else {
-            foreach ($cities as $c) {
-                foreach ($c->matchers as $matcher) {
-                    if (strpos($commission['product'], $matcher) !== false) {
-                        $commission['city'] = $c;
-                        break 2;
-                    }
-                }
+        // German override: city=Parijs + DE → NachParis; city=Azoren + DE → AzorenPortugalDE
+        if ($commission['city'] && in_array($lang, ['de', 'german', 'germany', 'deutsch'])) {
+            if ($commission['city']->title === 'Parijs') {
+                $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
+            } elseif ($commission['city']->title === 'Azoren') {
+                $commission['website'] = Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first();
             }
         }
 

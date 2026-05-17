@@ -51,6 +51,8 @@ Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets
 Route::post('/tiqets/sync/clear-cache', [TiqetsSyncController::class, 'clearCache'])->name('tiqets.sync.clear-cache');
 Route::post('/tiqets/sync/day', [TiqetsSyncController::class, 'syncDay'])->name('tiqets.sync.day');
 Route::post('/tiqets/sync/fix-day', [TiqetsSyncController::class, 'fixDay'])->name('tiqets.sync.fix-day');
+Route::post('/tiqets/correct-misassigned', [TiqetsSyncController::class, 'correctMisassigned'])->name('tiqets.correct-misassigned');
+Route::get('/tiqets/preview-corrections', [TiqetsSyncController::class, 'previewCorrections'])->name('tiqets.preview-corrections');
 
 Route::get('/adsense/sync', [AdSenseSyncController::class, 'index'])->name('adsense.sync');
 Route::get('/adsense/callback', [AdSenseSyncController::class, 'callback'])->name('adsense.callback');

@@ -134,6 +134,30 @@
         </div>
         @endif
 
+        <!-- Correctie: Parijs + DE → NachParis -->
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6 flex items-start justify-between gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700">Correctie: Parijs + Duits → NachParis</h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Verplaatst bestaande commissies waarbij stad = Parijs, taal = Duits en website = WegwijsnaarParijs
+                        naar NachParis. Handig om eerder verkeerd gematche commissies te corrigeren.
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1" id="correction-preview">
+                        <a href="#" onclick="loadPreview(event)" class="underline hover:text-gray-600">Bekijk hoeveel commissies dit betreft</a>
+                    </p>
+                </div>
+                <form action="{{ route('tiqets.correct-misassigned') }}" method="POST"
+                      onsubmit="return confirm('Weet je zeker dat je deze commissies wilt verplaatsen naar NachParis?')"
+                      class="shrink-0">
+                    @csrf
+                    <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-1.5 px-4 rounded">
+                        Corrigeer
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <!-- Cache wissen -->
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 flex items-center justify-between">
@@ -315,6 +339,17 @@ async function runDays(days) {
 function fixDay(date) {
     document.getElementById('fix-day-input').value = date;
     document.getElementById('fix-day-form').submit();
+}
+
+async function loadPreview(e) {
+    e.preventDefault();
+    const el = document.getElementById('correction-preview');
+    el.textContent = 'Laden...';
+    const res = await fetch('{{ route('tiqets.preview-corrections') }}');
+    const data = await res.json();
+    el.textContent = data.error
+        ? data.error
+        : `${data.count} commissie(s) worden verplaatst naar NachParis.`;
 }
 
 function getDaysBetween(from, to) {
