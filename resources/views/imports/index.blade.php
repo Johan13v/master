@@ -30,12 +30,13 @@
 
                 <div class="space-y-4">
                     @foreach($groups as $groupKey => $groupContent)
-                    @php $isApiGroup = (bool) preg_match('/^\d{4}$/', $groupKey); @endphp
+                    @php $isApiGroup = str_starts_with((string) $groupKey, 'year:'); @endphp
 
                     @if($isApiGroup)
                         {{-- API stream: year → months --}}
+                        @php $year = substr($groupKey, 5); @endphp
                         <div>
-                            <div class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">{{ $groupKey }}</div>
+                            <div class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">{{ $year }}</div>
                             <div class="space-y-2 pl-2">
                                 @foreach($groupContent as $month => $monthImports)
                                 @php

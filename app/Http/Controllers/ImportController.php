@@ -25,19 +25,18 @@ class ImportController extends Controller
 
                 if ($isApiStream) {
                     return $streamImports->groupBy(function ($i) {
-                        if (preg_match('/(\d{4})-\d{2}-\d{2}/', $i->title, $m)) {
-                            return $m[1];
-                        }
-                        return $i->created_at->format('Y');
+                        $year = preg_match('/(\d{4})-\d{2}-\d{2}/', $i->title, $m)
+                            ? $m[1]
+                            : $i->created_at->format('Y');
+                        return 'year:' . $year;
                     })->map(fn($yearImports) => $yearImports->groupBy(function ($i) {
-                        if (preg_match('/(\d{4}-\d{2})-\d{2}/', $i->title, $m)) {
-                            return $m[1];
-                        }
-                        return $i->created_at->format('Y-m');
+                        return preg_match('/(\d{4}-\d{2})-\d{2}/', $i->title, $m)
+                            ? $m[1]
+                            : $i->created_at->format('Y-m');
                     }));
                 }
 
-                return $streamImports->groupBy('id');
+                return $streamImports->groupBy(fn($i) => 'id:' . $i->id);
             });
 
         return view('imports.index', compact('imports'));
