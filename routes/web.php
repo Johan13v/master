@@ -39,6 +39,7 @@ Route::get('revenue-streams/{revenueStream}/import', [ImportController::class, '
 Route::post('revenue-streams/{revenueStream}/import', [ImportController::class, 'import'])->name('imports.import');
 Route::post('revenue-streams/{revenueStream}/import/update-matchers', [ImportController::class, 'updateMatchers'])->name('imports.updateMatchers');
 Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
+Route::delete('imports-by-month', [ImportController::class, 'destroyByMonth'])->name('imports.destroyByMonth');
 
 Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets.sync');
 Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');

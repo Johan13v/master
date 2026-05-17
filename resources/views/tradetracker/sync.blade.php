@@ -99,6 +99,13 @@
                             Pagina vernieuwen
                         </button>
                     </div>
+
+                    <!-- Mislukte dagen -->
+                    <div id="retry-section" class="hidden mt-3">
+                        <button id="retry-btn" onclick="retryFailed()"
+                                class="bg-red-100 hover:bg-red-200 text-red-800 text-sm font-medium px-4 py-2 rounded border border-red-300">
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -172,15 +179,30 @@
 
 @push('scripts')
 <script>
+let failedDays = [];
+
 async function startBackfill() {
     const from = document.getElementById('backfill-from').value;
     const to   = document.getElementById('backfill-to').value;
-
     if (!from || !to) { alert('Vul beide datums in.'); return; }
-
     const days = getDaysBetween(from, to);
     if (days.length === 0) return;
 
+    document.getElementById('backfill-log').innerHTML = '';
+    document.getElementById('retry-section').classList.add('hidden');
+    failedDays = [];
+    await runDays(days);
+}
+
+async function retryFailed() {
+    if (failedDays.length === 0) return;
+    const days = [...failedDays];
+    failedDays = [];
+    document.getElementById('retry-section').classList.add('hidden');
+    await runDays(days);
+}
+
+async function runDays(days) {
     const btn             = document.getElementById('backfill-btn');
     const progress        = document.getElementById('backfill-progress');
     const bar             = document.getElementById('backfill-bar');
@@ -189,13 +211,15 @@ async function startBackfill() {
     const log             = document.getElementById('backfill-log');
     const unmatchedSection = document.getElementById('unmatched-section');
     const unmatchedDays   = document.getElementById('unmatched-days');
+    const retrySection    = document.getElementById('retry-section');
+    const retryBtn        = document.getElementById('retry-btn');
 
     btn.disabled = true;
     btn.textContent = 'Bezig...';
     progress.classList.remove('hidden');
     unmatchedSection.classList.add('hidden');
     unmatchedDays.innerHTML = '';
-    log.innerHTML = '';
+    bar.style.width = '0%';
     bar.classList.replace('bg-green-500', 'bg-indigo-500');
 
     let created = 0, skipped = 0, existing = 0, daysWithUnmatched = [];
@@ -218,6 +242,7 @@ async function startBackfill() {
             });
 
             const result = await response.json();
+            if (!response.ok || result.error) throw new Error(result.error || `HTTP ${response.status}`);
 
             let logLine = `${date}: `;
             if (result.already_exists) {
@@ -239,10 +264,12 @@ async function startBackfill() {
             log.scrollTop = log.scrollHeight;
 
         } catch (e) {
+            failedDays.push(date);
             const line = document.createElement('div');
             line.textContent = `${date}: fout — ${e.message}`;
             line.classList.add('text-red-500');
             log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
         }
     }
 
@@ -253,6 +280,11 @@ async function startBackfill() {
     btn.disabled = false;
     btn.textContent = 'Start backfill';
 
+    if (failedDays.length > 0) {
+        retryBtn.textContent = `Retry ${failedDays.length} mislukte dag${failedDays.length === 1 ? '' : 'en'}`;
+        retrySection.classList.remove('hidden');
+    }
+
     if (daysWithUnmatched.length > 0) {
         unmatchedSection.classList.remove('hidden');
         daysWithUnmatched.forEach(date => {
@@ -262,7 +294,7 @@ async function startBackfill() {
             b.onclick = () => fixDay(date);
             unmatchedDays.appendChild(b);
         });
-    } else {
+    } else if (failedDays.length === 0) {
         setTimeout(() => window.location.reload(), 1500);
     }
 }

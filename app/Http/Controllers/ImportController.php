@@ -19,7 +19,8 @@ class ImportController extends Controller
         $imports = Import::with(['revenueStream', 'commissions'])
             ->orderByDesc('created_at')
             ->get()
-            ->groupBy('revenueStream.title');
+            ->groupBy('revenueStream.title')
+            ->map(fn($streamImports) => $streamImports->groupBy(fn($i) => $i->created_at->format('Y-m')));
 
         return view('imports.index', compact('imports'));
     }
@@ -85,6 +86,10 @@ class ImportController extends Controller
         DB::transaction(function () use ($data, $request, $header, $revenueStream, &$unmatchedRows, $import, $cities, $websites) {
 
             foreach ($data as $row) {
+
+                if (count($row) !== count($header)) {
+                    continue;
+                }
 
                 $rowData = array_combine($header, $row);
 
@@ -284,6 +289,27 @@ class ImportController extends Controller
         return redirect()->route('imports.index')->with('success', 'Matchers updated and commissions imported successfully.');
     }
 
+
+    public function destroyByMonth(Request $request)
+    {
+        $request->validate([
+            'revenue_stream_id' => 'required|integer|exists:revenue_streams,id',
+            'month'             => ['required', 'string', 'regex:/^\d{4}-\d{2}$/'],
+        ]);
+
+        DB::transaction(function () use ($request) {
+            Import::where('revenue_stream_id', $request->revenue_stream_id)
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$request->month])
+                ->get()
+                ->each(function ($import) {
+                    $import->commissions()->delete();
+                    $import->delete();
+                });
+        });
+
+        return redirect()->route('imports.index')
+            ->with('success', "Alle imports voor {$request->month} zijn verwijderd.");
+    }
 
     public function destroy(Import $import)
     {
