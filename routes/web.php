@@ -40,6 +40,8 @@ Route::post('revenue-streams/{revenueStream}/import', [ImportController::class, 
 Route::post('revenue-streams/{revenueStream}/import/update-matchers', [ImportController::class, 'updateMatchers'])->name('imports.updateMatchers');
 Route::delete('imports/{import}', [ImportController::class, 'destroy'])->name('imports.destroy');
 Route::delete('imports-by-month', [ImportController::class, 'destroyByMonth'])->name('imports.destroyByMonth');
+Route::get('imports/{import}/breakdown', [ImportController::class, 'breakdown'])->name('imports.breakdown');
+Route::post('imports/{import}/reassign', [ImportController::class, 'reassign'])->name('imports.reassign');
 
 Route::get('/tiqets/sync', [TiqetsSyncController::class, 'index'])->name('tiqets.sync');
 Route::post('/tiqets/sync', [TiqetsSyncController::class, 'sync'])->name('tiqets.sync.run');

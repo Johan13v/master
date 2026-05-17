@@ -20,7 +20,12 @@ class ImportController extends Controller
             ->orderByDesc('created_at')
             ->get()
             ->groupBy('revenueStream.title')
-            ->map(fn($streamImports) => $streamImports->groupBy(fn($i) => $i->created_at->format('Y-m')));
+            ->map(fn($streamImports) => $streamImports->groupBy(function ($i) {
+                if (preg_match('/(\d{4}-\d{2})-\d{2}/', $i->title, $m)) {
+                    return $m[1];
+                }
+                return $i->created_at->format('Y-m');
+            }));
 
         return view('imports.index', compact('imports'));
     }
@@ -293,13 +298,14 @@ class ImportController extends Controller
     public function destroyByMonth(Request $request)
     {
         $request->validate([
-            'revenue_stream_id' => 'required|integer|exists:revenue_streams,id',
-            'month'             => ['required', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'import_ids'   => 'required|array',
+            'import_ids.*' => 'integer|exists:imports,id',
         ]);
 
+        $count = count($request->import_ids);
+
         DB::transaction(function () use ($request) {
-            Import::where('revenue_stream_id', $request->revenue_stream_id)
-                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$request->month])
+            Import::whereIn('id', $request->import_ids)
                 ->get()
                 ->each(function ($import) {
                     $import->commissions()->delete();
@@ -308,7 +314,41 @@ class ImportController extends Controller
         });
 
         return redirect()->route('imports.index')
-            ->with('success', "Alle imports voor {$request->month} zijn verwijderd.");
+            ->with('success', "{$count} import(s) verwijderd.");
+    }
+
+    public function breakdown(Import $import)
+    {
+        $byCity = $import->commissions()->with('city')->get()
+            ->groupBy('city_id')
+            ->map(function ($group) {
+                return [
+                    'city'    => $group->first()->city,
+                    'count'   => $group->count(),
+                    'amount'  => $group->sum('amount'),
+                    'samples' => $group->take(5)->pluck('title'),
+                ];
+            })
+            ->sortByDesc('count');
+
+        $cities = City::orderBy('title')->get();
+
+        return view('imports.breakdown', compact('import', 'byCity', 'cities'));
+    }
+
+    public function reassign(Request $request, Import $import)
+    {
+        $request->validate([
+            'from_city_id' => 'required|integer|exists:cities,id',
+            'to_city_id'   => 'required|integer|exists:cities,id|different:from_city_id',
+        ]);
+
+        $count = $import->commissions()
+            ->where('city_id', $request->from_city_id)
+            ->update(['city_id' => $request->to_city_id]);
+
+        return redirect()->route('imports.breakdown', $import)
+            ->with('success', "{$count} commissies verplaatst.");
     }
 
     public function destroy(Import $import)
