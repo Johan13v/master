@@ -20,6 +20,29 @@
             <a href="{{ route('imports.index') }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Terug naar imports</a>
         </div>
 
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-4">
+                <div class="text-xs uppercase text-gray-400">Totaal rijen</div>
+                <div class="text-xl font-semibold text-gray-800">{{ $import->total_rows ?? 0 }}</div>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-4">
+                <div class="text-xs uppercase text-gray-400">Geimporteerd</div>
+                <div class="text-xl font-semibold text-gray-800">{{ $import->imported_count ?? $import->commissions()->count() }}</div>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-4">
+                <div class="text-xs uppercase text-gray-400">Duplicates</div>
+                <div class="text-xl font-semibold text-gray-800">{{ $import->duplicate_count ?? 0 }}</div>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-4">
+                <div class="text-xs uppercase text-gray-400">Revoked</div>
+                <div class="text-xl font-semibold text-gray-800">{{ $import->revoked_count ?? 0 }}</div>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-4">
+                <div class="text-xs uppercase text-gray-400">Unmatched</div>
+                <div class="text-xl font-semibold {{ ($import->unmatched_count ?? 0) > 0 ? 'text-amber-600' : 'text-gray-800' }}">{{ $import->unmatched_count ?? 0 }}</div>
+            </div>
+        </div>
+
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-1">Commissies per stad</h3>

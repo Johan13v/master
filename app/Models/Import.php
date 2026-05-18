@@ -13,6 +13,10 @@ class Import extends Model
         'revenue_stream_id',
         'title',
         'unmatched_count',
+        'total_rows',
+        'imported_count',
+        'duplicate_count',
+        'revoked_count',
     ];
 
     public function commissions()

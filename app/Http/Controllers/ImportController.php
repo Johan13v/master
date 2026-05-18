@@ -92,6 +92,12 @@ class ImportController extends Controller
 
         $unmatchedRows = [];
         $duplicateRows = [];
+        $stats = [
+            'total_rows' => 0,
+            'imported_count' => 0,
+            'duplicate_count' => 0,
+            'revoked_count' => 0,
+        ];
 
         $import = Import::create([
             'revenue_stream_id' => $revenueStream->id,
@@ -100,13 +106,15 @@ class ImportController extends Controller
         $cities = City::all();
         $websites = Website::all();
 
-        DB::transaction(function () use ($data, $request, $header, $revenueStream, &$unmatchedRows, $import, $cities, $websites) {
+        DB::transaction(function () use ($data, $request, $header, $revenueStream, &$unmatchedRows, &$duplicateRows, &$stats, $import, $cities, $websites) {
 
             foreach ($data as $row) {
 
                 if (count($row) !== count($header)) {
                     continue;
                 }
+
+                $stats['total_rows']++;
 
                 $rowData = array_combine($header, $row);
 
@@ -170,6 +178,7 @@ class ImportController extends Controller
 
                 if (Commission::where('reference_id', $commission['referenceId'])->exists()) {
                     $duplicateRows[] = $rowData;
+                    $stats['duplicate_count']++;
                     continue;
                 }
 
@@ -189,10 +198,13 @@ class ImportController extends Controller
 
 
                 if ($commission['status'] == 'revoked') {
+                    $stats['revoked_count']++;
                     continue;
                 }
 
-                if ($commission['city'] && $commission['website']) {
+                [$unmatchedCity, $unmatchedWebsite] = $this->getUnmatchedFlags($commission);
+
+                if (!$unmatchedCity && !$unmatchedWebsite) {
                     if (!isset($commission['website']->id)) {
                         dd($commission);
                     }
@@ -216,23 +228,33 @@ class ImportController extends Controller
                         'reference_id' => $commission['referenceId'],
                         'affiliate_id' => $commission['affiliateId'] ?? null,
                     ]);
+                    $stats['imported_count']++;
                 } else {
                     $unmatchedRows[] = [
                         'commission' => $commission,
-                        'unmatchedCity' => !$commission['city'],
-                        'unmatchedWebsite' => !$commission['website'],
+                        'unmatchedCity' => $unmatchedCity,
+                        'unmatchedWebsite' => $unmatchedWebsite,
+                        'reason' => $this->buildUnmatchedReason($commission, $unmatchedCity, $unmatchedWebsite),
                     ];
                 }
             }
         });
 
+        $import->update([
+            'total_rows' => $stats['total_rows'],
+            'imported_count' => $stats['imported_count'],
+            'duplicate_count' => $stats['duplicate_count'],
+            'revoked_count' => $stats['revoked_count'],
+            'unmatched_count' => count($unmatchedRows),
+        ]);
+
         if (count($unmatchedRows) > 0) {
             $cities = City::all();
             $websites = Website::all();
-            return view('imports.unmatched', compact('unmatchedRows', 'duplicateRows', 'revenueStream', 'import', 'cities', 'websites'));
+            return view('imports.unmatched', compact('unmatchedRows', 'duplicateRows', 'revenueStream', 'import', 'cities', 'websites', 'stats'));
         }
 
-        return redirect()->route('imports.index')->with('success', 'Commissions imported successfully.');
+        return redirect()->route('imports.index')->with('success', $this->buildImportSuccessMessage($stats));
     }
 
     public function updateMatchers(Request $request, RevenueStream $revenueStream)
@@ -243,8 +265,10 @@ class ImportController extends Controller
         $websiteMatches = $request->input('website_matches');
         $websiteNewMatchers = $request->input('website_new_matchers');
         $importId = $request->input('import_id');
+        $remainingUnmatchedRows = [];
+        $createdCount = 0;
 
-        DB::transaction(function () use ($rows, $cityMatches, $cityNewMatchers, $websiteMatches, $websiteNewMatchers, $revenueStream, $importId) {
+        DB::transaction(function () use ($rows, $cityMatches, $cityNewMatchers, $websiteMatches, $websiteNewMatchers, $revenueStream, $importId, &$remainingUnmatchedRows, &$createdCount) {
             foreach ($rows as $index => $encodedRow) {
                 $commission = json_decode(base64_decode($encodedRow), true);
 
@@ -274,6 +298,18 @@ class ImportController extends Controller
                     }
                 }
 
+                [$unmatchedCity, $unmatchedWebsite] = $this->getUnmatchedFlags($commission);
+
+                if ($unmatchedCity || $unmatchedWebsite) {
+                    $remainingUnmatchedRows[] = [
+                        'commission' => $commission,
+                        'unmatchedCity' => $unmatchedCity,
+                        'unmatchedWebsite' => $unmatchedWebsite,
+                        'reason' => $this->buildUnmatchedReason($commission, $unmatchedCity, $unmatchedWebsite),
+                    ];
+                    continue;
+                }
+
                 if ($commission['city'] && $commission['website']) {
                     $website_id = $commission['website']['id'];
                     if($commission['city']['id'] == '15') {
@@ -291,21 +327,51 @@ class ImportController extends Controller
                         'status' => $commission['status'],
                         'customer_language' => $commission['customerLanguage'],
                         'reference_id' => $commission['referenceId'],
+                        'affiliate_id' => $commission['affiliateId'] ?? null,
                     ]);
+                    $createdCount++;
                 }
             }
         });
 
         if ($importId) {
-            \App\Models\Import::where('id', $importId)->update(['unmatched_count' => 0]);
+            $import = \App\Models\Import::find($importId);
+            if ($import) {
+                $import->update([
+                    'unmatched_count' => count($remainingUnmatchedRows),
+                    'imported_count' => $import->imported_count + $createdCount,
+                ]);
+            }
+        }
+
+        if (count($remainingUnmatchedRows) > 0) {
+            $import = Import::findOrFail($importId);
+            $cities = City::all();
+            $websites = Website::all();
+            $stats = [
+                'total_rows' => $import->total_rows,
+                'imported_count' => $import->imported_count,
+                'duplicate_count' => $import->duplicate_count,
+                'revoked_count' => $import->revoked_count,
+            ];
+
+            return view('imports.unmatched', [
+                'unmatchedRows' => $remainingUnmatchedRows,
+                'duplicateRows' => [],
+                'revenueStream' => $revenueStream,
+                'import' => $import,
+                'cities' => $cities,
+                'websites' => $websites,
+                'stats' => $stats,
+            ]);
         }
 
         $returnTo = $request->input('return_to');
         if ($returnTo && str_starts_with($returnTo, url('/'))) {
-            return redirect($returnTo)->with('success', 'Matchers opgeslagen en commissies geïmporteerd.');
+            return redirect($returnTo)->with('success', "Matchers opgeslagen en {$createdCount} commissies geïmporteerd.");
         }
 
-        return redirect()->route('imports.index')->with('success', 'Matchers updated and commissions imported successfully.');
+        return redirect()->route('imports.index')->with('success', "Matchers opgeslagen en {$createdCount} commissies geïmporteerd.");
     }
 
 
@@ -442,6 +508,58 @@ class ImportController extends Controller
         $cities = City::orderBy('title')->get();
 
         return view('imports.breakdown', compact('import', 'byCity', 'cities', 'commissions'));
+    }
+
+    private function getUnmatchedFlags(array $commission): array
+    {
+        return [
+            $this->isUnknownEntity($commission['city'] ?? null),
+            $this->isUnknownEntity($commission['website'] ?? null),
+        ];
+    }
+
+    private function isUnknownEntity($entity): bool
+    {
+        if (!$entity) {
+            return true;
+        }
+
+        $title = is_array($entity) ? ($entity['title'] ?? null) : ($entity->title ?? null);
+        if (!$title) {
+            return true;
+        }
+
+        return in_array(mb_strtolower(trim($title)), ['onbekend', 'onbekend..'], true);
+    }
+
+    private function buildUnmatchedReason(array $commission, bool $unmatchedCity, bool $unmatchedWebsite): string
+    {
+        $reasons = [];
+
+        if ($unmatchedCity) {
+            $reasons[] = 'Stad kon niet betrouwbaar gematcht worden';
+        }
+
+        if ($unmatchedWebsite) {
+            $reasons[] = 'Website kon niet betrouwbaar gematcht worden';
+        }
+
+        if (isset($commission['cityName']) && $commission['cityName'] !== '') {
+            $reasons[] = "Bronstad: {$commission['cityName']}";
+        }
+
+        return implode(' · ', $reasons);
+    }
+
+    private function buildImportSuccessMessage(array $stats): string
+    {
+        return sprintf(
+            'Import verwerkt: %d toegevoegd, %d duplicates, %d revoked, %d unmatched.',
+            $stats['imported_count'],
+            $stats['duplicate_count'],
+            $stats['revoked_count'],
+            $stats['total_rows'] - $stats['imported_count'] - $stats['duplicate_count'] - $stats['revoked_count']
+        );
     }
 
     public function reassign(Request $request, Import $import)
@@ -693,8 +811,8 @@ class ImportController extends Controller
             }
         }
 
-        // Fall back to substring match on the activity title for edge cases.
-        if ($commission['city'] == null) {
+        // Only fall back to title matching when GYG did not provide a city name at all.
+        if ($commission['city'] == null && $gygCity === '') {
             foreach ($cities as $c) {
                 foreach ($c->matchers as $matcher) {
                     if (stripos($commission['product'], $matcher) !== false) {

@@ -83,6 +83,11 @@
                                         <span class="text-gray-500">{{ $import->commissions->count() }} commissies</span>
                                     @endif
                                 </span>
+                                @if(($import->unmatched_count ?? 0) > 0)
+                                    <span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                                        {{ $import->unmatched_count }} unmatched
+                                    </span>
+                                @endif
                             </div>
                             <div class="flex items-center gap-4">
                                 <a href="{{ route('imports.breakdown', $import) }}"
