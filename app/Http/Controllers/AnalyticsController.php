@@ -36,7 +36,26 @@ class AnalyticsController extends Controller
             ->filter(fn($d) => $d['city'] !== null)
             ->sortByDesc('current_total');
 
-        // 2. YoY per destination per source
+        // 2. YoY per source
+        $bySource = $commissions
+            ->groupBy('revenue_stream_id')
+            ->map(function ($items) use ($currentYear, $compareYear) {
+                $cur  = $items->filter(fn($c) => $this->year($c) === $currentYear);
+                $prev = $items->filter(fn($c) => $this->year($c) === $compareYear);
+
+                return [
+                    'stream'          => $items->first()->revenueStream,
+                    'current_amount'  => $cur->sum('amount'),
+                    'previous_amount' => $prev->sum('amount'),
+                    'current_count'   => $cur->count(),
+                    'previous_count'  => $prev->count(),
+                ];
+            })
+            ->filter(fn($row) => $row['stream'] !== null)
+            ->sortByDesc('current_amount')
+            ->values();
+
+        // 3. YoY per destination per source
         $byCitySource = $commissions
             ->groupBy('city_id')
             ->map(function ($items) use ($currentYear, $compareYear) {
@@ -55,7 +74,7 @@ class AnalyticsController extends Controller
             ->filter(fn($d) => $d['city'] !== null)
             ->sortByDesc(fn($d) => $d['sources']->sum('current'));
 
-        // 3. Paris × Tiqets per product
+        // 4. Paris × Tiqets per product
         $parisCity    = City::whereJsonContains('matchers', 'Paris')->first();
         $tiqetsStream = RevenueStream::where('title', 'like', '%iqets%')->first();
         $parisTiqets  = collect();
@@ -81,7 +100,7 @@ class AnalyticsController extends Controller
                 ->values();
         }
 
-        // 4. Booking.com per affiliate ID (campaign)
+        // 5. Booking.com per affiliate ID (campaign)
         $bookingStream = RevenueStream::where('title', 'like', '%ooking%')->first();
         $bookingAffiliate = collect();
 
@@ -112,7 +131,7 @@ class AnalyticsController extends Controller
             ->pluck('year');
 
         return view('analytics.index', compact(
-            'byCity', 'byCitySource', 'parisTiqets', 'bookingAffiliate',
+            'byCity', 'bySource', 'byCitySource', 'parisTiqets', 'bookingAffiliate',
             'currentYear', 'compareYear', 'months', 'availableYears', 'isYearToDate', 'cutoffLabel'
         ));
     }

@@ -421,7 +421,13 @@ class ImportController extends Controller
 
     public function breakdown(Import $import)
     {
-        $byCity = $import->commissions()->with('city')->get()
+        $commissions = $import->commissions()
+            ->with(['city', 'website'])
+            ->orderByDesc('order_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $byCity = $commissions
             ->groupBy('city_id')
             ->map(function ($group) {
                 return [
@@ -435,7 +441,7 @@ class ImportController extends Controller
 
         $cities = City::orderBy('title')->get();
 
-        return view('imports.breakdown', compact('import', 'byCity', 'cities'));
+        return view('imports.breakdown', compact('import', 'byCity', 'cities', 'commissions'));
     }
 
     public function reassign(Request $request, Import $import)

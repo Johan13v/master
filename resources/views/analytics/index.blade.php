@@ -103,7 +103,42 @@
             </div>
         </div>
 
-        {{-- ─── 2. YoY per bestemming per bron ───────────────────────────── --}}
+        {{-- ─── 2. YoY per bron ───────────────────────────────────────────── --}}
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-700 mb-1">Jaar-op-jaar per bron</h3>
+                @if($isYearToDate)
+                    <p class="text-xs text-gray-400 mb-5">Vergelijking loopt t/m {{ $cutoffLabel }} in beide jaren.</p>
+                @endif
+
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-gray-400 uppercase text-xs border-b border-gray-200">
+                            <th class="pb-2 pr-4">Bron</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                            <th class="pb-2 text-right">YoY</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($bySource as $source)
+                        <tr>
+                            <td class="py-2 pr-4 text-gray-700">{{ $source['stream']?->title ?? '—' }}</td>
+                            <td class="py-2 pr-4 text-right text-gray-400">{{ $source['previous_count'] }}</td>
+                            <td class="py-2 pr-4 text-right text-gray-600">{{ $source['current_count'] }}</td>
+                            <td class="py-2 pr-4 text-right text-gray-400">{{ fmt($source['previous_amount']) }}</td>
+                            <td class="py-2 pr-4 text-right text-gray-800">{{ fmt($source['current_amount']) }}</td>
+                            <td class="py-2 text-right">{!! growth($source['current_amount'], $source['previous_amount']) !!}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- ─── 3. YoY per bestemming per bron ───────────────────────────── --}}
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-5">Jaar-op-jaar per bestemming per bron</h3>
@@ -137,7 +172,7 @@
             </div>
         </div>
 
-        {{-- ─── 3. Parijs × Tiqets per product ───────────────────────────── --}}
+        {{-- ─── 4. Parijs × Tiqets per product ───────────────────────────── --}}
         @if($parisTiqets->isNotEmpty())
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
@@ -159,10 +194,26 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach($parisTiqets as $product)
-                        <tr>
-                            <td class="py-2 pr-4 text-gray-700 max-w-xs truncate" title="{{ implode("\n", $product['variants']->all()) }}">
-                                {{ $product['product'] }}
+                        @foreach($parisTiqets as $index => $product)
+                        @php
+                            $rowId = 'tiqets-product-' . $index;
+                            $variantCount = $product['variants']->count();
+                        @endphp
+                        <tr
+                            @if($variantCount > 1)
+                                class="cursor-pointer hover:bg-gray-50"
+                                onclick="document.getElementById('{{ $rowId }}').classList.toggle('hidden')"
+                            @endif
+                        >
+                            <td class="py-2 pr-4 text-gray-700 max-w-xs">
+                                <div class="truncate" title="{{ implode("\n", $product['variants']->all()) }}">
+                                    {{ $product['product'] }}
+                                </div>
+                                @if($variantCount > 1)
+                                    <div class="text-xs text-gray-400 mt-0.5">
+                                        samengevoegd uit {{ $variantCount }} varianten
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-2 pr-4 text-right text-gray-400">{{ $product['previous_count'] }}</td>
                             <td class="py-2 pr-4 text-right text-gray-600">{{ $product['current_count'] }}</td>
@@ -170,6 +221,20 @@
                             <td class="py-2 pr-4 text-right text-gray-800">{{ fmt($product['current_amount']) }}</td>
                             <td class="py-2 text-right">{!! growth($product['current_amount'], $product['previous_amount']) !!}</td>
                         </tr>
+                        @if($variantCount > 1)
+                        <tr id="{{ $rowId }}" class="hidden bg-gray-50">
+                            <td colspan="6" class="px-4 py-3">
+                                <div class="text-xs font-medium text-gray-500 uppercase mb-2">Onderliggende varianten</div>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($product['variants'] as $variant)
+                                        <span class="inline-flex items-center rounded-full bg-white border border-gray-200 px-2.5 py-1 text-xs text-gray-600">
+                                            {{ $variant }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </td>
+                        </tr>
+                        @endif
                         @endforeach
                     </tbody>
                 </table>
@@ -177,7 +242,7 @@
         </div>
         @endif
 
-        {{-- ─── 4. Booking.com per affiliate ID (campaign) ────────────────── --}}
+        {{-- ─── 5. Booking.com per affiliate ID (campaign) ────────────────── --}}
         @if($bookingAffiliate->isNotEmpty())
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">

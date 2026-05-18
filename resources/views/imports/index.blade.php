@@ -71,7 +71,6 @@
                         {{-- Manual import: individual row --}}
                         @php
                             $import = $groupContent->first();
-                            $isBooking = stripos($streamName, 'booking') !== false;
                         @endphp
                         <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                             <div class="flex items-center gap-6">
@@ -86,12 +85,10 @@
                                 </span>
                             </div>
                             <div class="flex items-center gap-4">
-                                @if($isBooking)
-                                    <a href="{{ route('imports.breakdown', $import) }}"
-                                       class="text-indigo-500 hover:text-indigo-700 text-xs">
-                                        Bekijk verdeling
-                                    </a>
-                                @endif
+                                <a href="{{ route('imports.breakdown', $import) }}"
+                                   class="text-indigo-500 hover:text-indigo-700 text-xs">
+                                    Bekijk import
+                                </a>
                                 <form action="{{ route('imports.destroy', $import) }}" method="POST"
                                       onsubmit="return confirm('Import en bijbehorende commissies verwijderen?')">
                                     @csrf

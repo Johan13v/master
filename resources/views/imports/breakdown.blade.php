@@ -151,6 +151,52 @@
             </div>
         </div>
 
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-700 mb-1">Geimporteerde commissies</h3>
+                <p class="text-sm text-gray-500 mb-6">
+                    Volledige lijst van alle commissies die aan deze import gekoppeld zijn.
+                </p>
+
+                @if($commissions->isEmpty())
+                    <p class="text-sm text-gray-500">Geen commissies gevonden voor deze import.</p>
+                @else
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead>
+                            <tr class="text-left text-gray-400 uppercase text-xs">
+                                <th class="pb-2 pr-4">Datum</th>
+                                <th class="pb-2 pr-4">Product</th>
+                                <th class="pb-2 pr-4">Stad</th>
+                                <th class="pb-2 pr-4">Website</th>
+                                <th class="pb-2 pr-4">Status</th>
+                                <th class="pb-2 pr-4">Referentie</th>
+                                <th class="pb-2 text-right">Bedrag</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($commissions as $commission)
+                            <tr>
+                                <td class="py-2 pr-4 text-gray-500 whitespace-nowrap">
+                                    {{ \Carbon\Carbon::parse($commission->order_date)->format('d-m-Y H:i') }}
+                                </td>
+                                <td class="py-2 pr-4 text-gray-700 max-w-md">
+                                    <div class="truncate" title="{{ $commission->title }}">{{ $commission->title }}</div>
+                                </td>
+                                <td class="py-2 pr-4 text-gray-600 whitespace-nowrap">{{ $commission->city?->title ?? '—' }}</td>
+                                <td class="py-2 pr-4 text-gray-600 whitespace-nowrap">{{ $commission->website?->title ?? '—' }}</td>
+                                <td class="py-2 pr-4 text-gray-500 whitespace-nowrap">{{ $commission->status }}</td>
+                                <td class="py-2 pr-4 text-gray-500 font-mono text-xs whitespace-nowrap">{{ $commission->reference_id }}</td>
+                                <td class="py-2 text-right text-gray-800 whitespace-nowrap">€{{ number_format($commission->amount, 2, ',', '.') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+            </div>
+        </div>
+
     </div>
 </div>
 
