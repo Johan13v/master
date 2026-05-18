@@ -117,8 +117,8 @@ class TradeTrackerApiService
     public function fetchTransactions(string $startDate, string $endDate): array
     {
         $options = [
-            'registrationDateFrom' => Carbon::parse($startDate)->startOfDay()->timestamp,
-            'registrationDateTo'   => Carbon::parse($endDate)->endOfDay()->timestamp,
+            'registrationDateFrom' => Carbon::parse($startDate)->startOfDay()->format('c'),
+            'registrationDateTo'   => Carbon::parse($endDate)->endOfDay()->format('c'),
         ];
 
         $all = [];
@@ -154,7 +154,7 @@ class TradeTrackerApiService
                         'referenceId'      => (string) ($tx->ID ?? ''),
                         'product'          => $tx->campaign->name ?? '',
                         'amount'           => (float) ($tx->commission ?? 0),
-                        'orderDate'        => Carbon::createFromTimestamp($tx->registrationDate ?? time())->format('Y-m-d H:i:s'),
+                        'orderDate'        => $this->parseSoapDateTime($tx->registrationDate ?? null),
                         'customerLanguage' => $tx->country ?? '',
                         'sitebrand'        => $tx->affiliateSite->name ?? '',
                         'status'           => $status,
@@ -167,6 +167,23 @@ class TradeTrackerApiService
         }
 
         return $all;
+    }
+
+    private function parseSoapDateTime(mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return Carbon::instance($value)->format('Y-m-d H:i:s');
+        }
+
+        if (is_numeric($value)) {
+            return Carbon::createFromTimestamp((int) $value)->format('Y-m-d H:i:s');
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            return Carbon::parse($value)->format('Y-m-d H:i:s');
+        }
+
+        return now()->format('Y-m-d H:i:s');
     }
 
     private function mapStatus(string $status): string
