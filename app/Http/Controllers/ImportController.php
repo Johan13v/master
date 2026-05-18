@@ -176,8 +176,27 @@ class ImportController extends Controller
                     $commission['status'] = $this->processStatus('fulfilled');
                 }
 
-                if (Commission::where('reference_id', $commission['referenceId'])->exists()) {
-                    $duplicateRows[] = $rowData;
+                $existingDuplicate = $this->findDuplicateCommission($commission['referenceId'] ?? null);
+                if ($existingDuplicate) {
+                    $duplicateRows[] = [
+                        'row' => $rowData,
+                        'reason' => 'Duplicate op reference_id',
+                        'reference_field' => $this->referenceFieldForCsvType($request->csv_type),
+                        'reference_value' => $commission['referenceId'] ?? null,
+                        'existing' => [
+                            'id' => $existingDuplicate->id,
+                            'title' => $existingDuplicate->title,
+                            'amount' => $existingDuplicate->amount,
+                            'order_date' => $existingDuplicate->order_date,
+                            'status' => $existingDuplicate->status,
+                            'reference_id' => $existingDuplicate->reference_id,
+                            'city' => $existingDuplicate->city?->title,
+                            'website' => $existingDuplicate->website?->title,
+                            'revenue_stream' => $existingDuplicate->revenueStream?->title,
+                            'import_title' => $existingDuplicate->import?->title,
+                            'import_id' => $existingDuplicate->import_id,
+                        ],
+                    ];
                     $stats['duplicate_count']++;
                     continue;
                 }
@@ -560,6 +579,30 @@ class ImportController extends Controller
             $stats['revoked_count'],
             $stats['total_rows'] - $stats['imported_count'] - $stats['duplicate_count'] - $stats['revoked_count']
         );
+    }
+
+    private function findDuplicateCommission(?string $referenceId): ?Commission
+    {
+        if (!$referenceId) {
+            return null;
+        }
+
+        return Commission::with(['city', 'website', 'revenueStream', 'import'])
+            ->where('reference_id', $referenceId)
+            ->first();
+    }
+
+    private function referenceFieldForCsvType(?string $csvType): string
+    {
+        return match ($csvType) {
+            'booking' => 'Booking number',
+            'getyourguide' => 'Booking Reference',
+            'tradetracker' => 'ID',
+            'bajabikes' => 'ID',
+            'tiqets' => 'reference_id',
+            'googleadsense' => 'generated reference_id',
+            default => 'reference_id',
+        };
     }
 
     public function reassign(Request $request, Import $import)

@@ -87,7 +87,28 @@
                         @foreach ($duplicateRows as $index => $row)
                             <div class="mb-6">
                                 <h4 class="text-md font-medium text-red-600 mb-2">Duplicate Row {{ $index + 1 }}</h4>
-                                <pre class="bg-red-100 p-4 rounded mb-2">{{ json_encode($row, JSON_PRETTY_PRINT) }}</pre>
+                                <div class="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                                    {{ $row['reason'] ?? 'Duplicate' }}
+                                    @if(!empty($row['reference_field']) && !empty($row['reference_value']))
+                                        · {{ $row['reference_field'] }} = {{ $row['reference_value'] }}
+                                    @endif
+                                </div>
+                                @if(!empty($row['existing']))
+                                    <div class="mb-2 bg-gray-50 border border-gray-200 rounded px-4 py-3 text-sm text-gray-700">
+                                        <div class="font-medium text-gray-800 mb-2">Botst met bestaande commission</div>
+                                        <div>ID: {{ $row['existing']['id'] }}</div>
+                                        <div>Import: {{ $row['existing']['import_title'] ?? '—' }} @if(!empty($row['existing']['import_id']))(#{{ $row['existing']['import_id'] }})@endif</div>
+                                        <div>Bron: {{ $row['existing']['revenue_stream'] ?? '—' }}</div>
+                                        <div>Product: {{ $row['existing']['title'] ?? '—' }}</div>
+                                        <div>Datum: {{ $row['existing']['order_date'] ?? '—' }}</div>
+                                        <div>Status: {{ $row['existing']['status'] ?? '—' }}</div>
+                                        <div>Stad: {{ $row['existing']['city'] ?? '—' }}</div>
+                                        <div>Website: {{ $row['existing']['website'] ?? '—' }}</div>
+                                        <div>Bedrag: €{{ number_format((float) ($row['existing']['amount'] ?? 0), 2, ',', '.') }}</div>
+                                        <div>Reference ID: {{ $row['existing']['reference_id'] ?? '—' }}</div>
+                                    </div>
+                                @endif
+                                <pre class="bg-red-100 p-4 rounded mb-2">{{ json_encode($row['row'] ?? $row, JSON_PRETTY_PRINT) }}</pre>
                             </div>
                         @endforeach
                     @endif
