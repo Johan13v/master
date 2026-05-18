@@ -153,7 +153,7 @@ class ImportController extends Controller
                 } elseif ($request->csv_type == 'getyourguide') {
                     $commission['referenceId'] = $rowData['Booking Reference'];
                     $commission['product'] = $rowData['Activity'];
-                    $commission['amount'] = $rowData['Potential income'];
+                    $commission['amount'] = str_replace(',', '', $rowData['Potential income']);
                     $commission['orderDate'] = Carbon::parse($rowData['Booking date'])->format('Y-m-d H:i:s');
                     $commission['customerLanguage'] = $rowData['Traveler origin'];
                     $commission['cityName'] = $rowData['City'];
