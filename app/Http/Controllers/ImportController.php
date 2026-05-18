@@ -707,9 +707,9 @@ class ImportController extends Controller
             }
         } else if ($commission['city'] != null && $commission['city']->title == 'Parijs') {
             if ($commission['customerLanguage'] == 'Switzerland' || $commission['customerLanguage'] == 'Austria' || $commission['customerLanguage'] == 'Germany') {
-                $commission['website'] = Website::whereJsonContains('matchers', 'NachParis')->first();
+                $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
             } else {
-                $commission['website'] = Website::whereJsonContains('matchers', 'WegwijsnaarParijs')->first();
+                $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaarparijs')->first();
             }
         } else {
             $commission['website'] = Website::whereJsonContains('matchers', 'Wegwijsnaar')->first();

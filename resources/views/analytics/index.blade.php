@@ -2,7 +2,7 @@
 
 @section('header')
     <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-        Analyses — {{ $currentYear }} vs {{ $compareYear }}
+        Analyses — {{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }} vs {{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}
     </h2>
 @endsection
 
@@ -38,14 +38,19 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-1">Jaar-op-jaar per bestemming</h3>
-                <p class="text-xs text-gray-400 mb-5">Klik op een rij om maanden uit te klappen.</p>
+                <p class="text-xs text-gray-400 mb-5">
+                    Klik op een rij om maanden uit te klappen.
+                    @if($isYearToDate)
+                        Vergelijking loopt t/m {{ $cutoffLabel }} in beide jaren.
+                    @endif
+                </p>
 
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="text-left text-gray-400 uppercase text-xs border-b border-gray-200">
                             <th class="pb-2 pr-4">Bestemming</th>
-                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}</th>
-                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
                             <th class="pb-2 text-right">YoY</th>
                         </tr>
                     </thead>
@@ -68,8 +73,8 @@
                                     <thead>
                                         <tr class="text-gray-400 uppercase">
                                             <th class="pb-1 pr-3 text-left">Maand</th>
-                                            <th class="pb-1 pr-3 text-right">{{ $compareYear }}</th>
-                                            <th class="pb-1 pr-3 text-right">{{ $currentYear }}</th>
+                                            <th class="pb-1 pr-3 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                                            <th class="pb-1 pr-3 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
                                             <th class="pb-1 text-right">YoY</th>
                                         </tr>
                                     </thead>
@@ -102,6 +107,9 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-5">Jaar-op-jaar per bestemming per bron</h3>
+                @if($isYearToDate)
+                    <p class="text-xs text-gray-400 mb-5">Vergelijking loopt t/m {{ $cutoffLabel }} in beide jaren.</p>
+                @endif
 
                 <div class="space-y-6">
                     @foreach($byCitySource as $cityId => $data)
@@ -134,23 +142,26 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-1">Parijs — Tiqets per product</h3>
-                <p class="text-xs text-gray-400 mb-5">Aantal boekingen en commissie per tour/activiteit.</p>
+                <p class="text-xs text-gray-400 mb-5">
+                    Aantal boekingen en commissie per tour/activiteit.
+                    Seine-cruises worden samengevoegd tot Normal, Lunch en Dinner.
+                </p>
 
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="text-left text-gray-400 uppercase text-xs border-b border-gray-200">
                             <th class="pb-2 pr-4">Product</th>
-                            <th class="pb-2 pr-4 text-right">{{ $compareYear }} (boek.)</th>
-                            <th class="pb-2 pr-4 text-right">{{ $currentYear }} (boek.)</th>
-                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}</th>
-                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
                             <th class="pb-2 text-right">YoY</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($parisTiqets as $product)
                         <tr>
-                            <td class="py-2 pr-4 text-gray-700 max-w-xs truncate" title="{{ $product['product'] }}">
+                            <td class="py-2 pr-4 text-gray-700 max-w-xs truncate" title="{{ implode("\n", $product['variants']->all()) }}">
                                 {{ $product['product'] }}
                             </td>
                             <td class="py-2 pr-4 text-right text-gray-400">{{ $product['previous_count'] }}</td>
@@ -171,16 +182,21 @@
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-700 mb-1">Booking.com per affiliate ID (campaign)</h3>
-                <p class="text-xs text-gray-400 mb-5">Gebaseerd op het "Affiliate ID" veld uit de Booking.com export.</p>
+                <p class="text-xs text-gray-400 mb-5">
+                    Gebaseerd op het "Affiliate ID" veld uit de Booking.com export.
+                    @if($isYearToDate)
+                        Vergelijking loopt t/m {{ $cutoffLabel }} in beide jaren.
+                    @endif
+                </p>
 
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="text-left text-gray-400 uppercase text-xs border-b border-gray-200">
                             <th class="pb-2 pr-4">Affiliate ID</th>
-                            <th class="pb-2 pr-4 text-right">{{ $compareYear }} (boek.)</th>
-                            <th class="pb-2 pr-4 text-right">{{ $currentYear }} (boek.)</th>
-                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}</th>
-                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }} (boek.)</th>
+                            <th class="pb-2 pr-4 text-right">{{ $compareYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
+                            <th class="pb-2 pr-4 text-right">{{ $currentYear }}{{ $isYearToDate ? ' YTD' : '' }}</th>
                             <th class="pb-2 text-right">YoY</th>
                         </tr>
                     </thead>

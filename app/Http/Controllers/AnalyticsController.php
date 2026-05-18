@@ -6,6 +6,7 @@ use App\Models\City;
 use App\Models\Commission;
 use App\Models\RevenueStream;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class AnalyticsController extends Controller
 {
@@ -13,11 +14,18 @@ class AnalyticsController extends Controller
     {
         $currentYear = (int) $request->get('year', now()->year);
         $compareYear = $currentYear - 1;
+        $isYearToDate = $currentYear === (int) now()->year;
+        $cutoffMonthDay = $isYearToDate ? now()->format('m-d') : null;
+        $cutoffLabel = $isYearToDate
+            ? Carbon::createFromFormat('m-d', $cutoffMonthDay)->translatedFormat('j F')
+            : null;
 
         $commissions = Commission::with(['city', 'revenueStream'])
             ->whereIn(\DB::raw('YEAR(order_date)'), [$currentYear, $compareYear])
             ->where('status', '!=', 'revoked')
-            ->get();
+            ->get()
+            ->filter(fn($commission) => $this->withinComparisonWindow($commission, $cutoffMonthDay))
+            ->values();
 
         $months = collect(range(1, 12))->map(fn($m) => str_pad($m, 2, '0', STR_PAD_LEFT));
 
@@ -56,19 +64,21 @@ class AnalyticsController extends Controller
             $parisTiqets = $commissions
                 ->where('city_id', $parisCity->id)
                 ->where('revenue_stream_id', $tiqetsStream->id)
-                ->groupBy('title')
-                ->map(function ($items) use ($currentYear, $compareYear) {
+                ->groupBy(fn($commission) => $this->normalizeTiqetsProduct($commission->title))
+                ->map(function ($items, $productGroup) use ($currentYear, $compareYear) {
                     $cur  = $items->filter(fn($c) => $this->year($c) === $currentYear);
                     $prev = $items->filter(fn($c) => $this->year($c) === $compareYear);
                     return [
-                        'product'          => $items->first()->title,
+                        'product'          => $productGroup,
                         'current_amount'   => $cur->sum('amount'),
                         'previous_amount'  => $prev->sum('amount'),
                         'current_count'    => $cur->count(),
                         'previous_count'   => $prev->count(),
+                        'variants'         => $items->pluck('title')->filter()->unique()->sort()->values(),
                     ];
                 })
-                ->sortByDesc('current_amount');
+                ->sortByDesc('current_amount')
+                ->values();
         }
 
         // 4. Booking.com per affiliate ID (campaign)
@@ -103,7 +113,7 @@ class AnalyticsController extends Controller
 
         return view('analytics.index', compact(
             'byCity', 'byCitySource', 'parisTiqets', 'bookingAffiliate',
-            'currentYear', 'compareYear', 'months', 'availableYears'
+            'currentYear', 'compareYear', 'months', 'availableYears', 'isYearToDate', 'cutoffLabel'
         ));
     }
 
@@ -126,6 +136,67 @@ class AnalyticsController extends Controller
     private function year(Commission $c): int
     {
         return (int) substr($c->order_date, 0, 4);
+    }
+
+    private function withinComparisonWindow(Commission $commission, ?string $cutoffMonthDay): bool
+    {
+        if ($cutoffMonthDay === null) {
+            return true;
+        }
+
+        return substr($commission->order_date, 5, 5) <= $cutoffMonthDay;
+    }
+
+    private function normalizeTiqetsProduct(?string $title): string
+    {
+        $title = trim((string) $title);
+
+        if ($title === '') {
+            return 'Onbekend product';
+        }
+
+        $title = preg_replace('/\s+/', ' ', str_replace(['®', '™'], '', $title)) ?? $title;
+        $lowerTitle = mb_strtolower($title);
+
+        if (str_contains($lowerTitle, 'seine') && str_contains($lowerTitle, 'cruise')) {
+            if (str_contains($lowerTitle, 'dinner')) {
+                return 'Seine River Cruise - Dinner';
+            }
+
+            if (str_contains($lowerTitle, 'lunch')) {
+                return 'Seine River Cruise - Lunch';
+            }
+
+            return 'Seine River Cruise - Normal';
+        }
+
+        if (str_contains($lowerTitle, 'eiffel tower')) {
+            return 'Eiffel Tower';
+        }
+
+        if (str_contains($lowerTitle, 'louvre')) {
+            if (str_contains($lowerTitle, 'guided')) {
+                return 'Louvre Museum - Guided Tours';
+            }
+
+            return 'Louvre Museum - Standard Entry';
+        }
+
+        if (
+            str_contains($lowerTitle, 'hop-on hop-off')
+            || str_contains($lowerTitle, 'hop on hop off')
+            || str_contains($lowerTitle, 'tootbus')
+            || str_contains($lowerTitle, 'big bus')
+            || str_contains($lowerTitle, 'batobus')
+        ) {
+            return 'Hop-on Hop-off';
+        }
+
+        if (str_contains($lowerTitle, 'versailles') || str_contains($lowerTitle, 'trianon')) {
+            return 'Versailles';
+        }
+
+        return $title;
     }
 
     public static function growth(float $current, float $previous): string
