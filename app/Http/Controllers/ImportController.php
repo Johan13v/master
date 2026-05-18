@@ -699,13 +699,13 @@ class ImportController extends Controller
             }
         }
 
-        if ($commission['city'] != null && $commission['city']->title == 'Azoren') {
+        if ($commission['city'] != null && ($commission['city']->title == 'Azoren' || $commission['city'] == 'Azores' || $commission['city'] == 'Santa Cruz Das Flores')) {
             if($commission['customerLanguage'] == 'Switzerland' || $commission['customerLanguage'] == 'Austria' || $commission['customerLanguage'] == 'Germany'){
                 $commission['website'] = Website::whereJsonContains('matchers', 'AzorenPortugalDE')->first();
             } else {
                 $commission['website'] = Website::whereJsonContains('matchers', 'De-azoren')->first();
             }
-        } else if ($commission['city'] != null && $commission['city']->title == 'Parijs') {
+        } else if ($commission['city'] != null && ($commission['city']->title == 'Parijs' | $commission['city']->title == 'Paris')) {
             if ($commission['customerLanguage'] == 'Switzerland' || $commission['customerLanguage'] == 'Austria' || $commission['customerLanguage'] == 'Germany') {
                 $commission['website'] = Website::whereJsonContains('matchers', 'Nachparis')->first();
             } else {
