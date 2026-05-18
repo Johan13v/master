@@ -105,15 +105,18 @@ class AnalyticsController extends Controller
         $bookingAffiliate = collect();
 
         if ($bookingStream) {
+            $affiliateLabels = config('booking_affiliate_labels', []);
+
             $bookingAffiliate = $commissions
                 ->where('revenue_stream_id', $bookingStream->id)
                 ->filter(fn($c) => !empty($c->affiliate_id))
                 ->groupBy('affiliate_id')
-                ->map(function ($items) use ($currentYear, $compareYear) {
+                ->map(function ($items, $affiliateId) use ($currentYear, $compareYear, $affiliateLabels) {
                     $cur  = $items->filter(fn($c) => $this->year($c) === $currentYear);
                     $prev = $items->filter(fn($c) => $this->year($c) === $compareYear);
                     return [
                         'affiliate_id'     => $items->first()->affiliate_id,
+                        'affiliate_label'  => $affiliateLabels[(string) $affiliateId] ?? null,
                         'current_amount'   => $cur->sum('amount'),
                         'previous_amount'  => $prev->sum('amount'),
                         'current_count'    => $cur->count(),

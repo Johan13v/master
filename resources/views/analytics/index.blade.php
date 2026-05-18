@@ -268,7 +268,12 @@
                     <tbody class="divide-y divide-gray-100">
                         @foreach($bookingAffiliate as $row)
                         <tr>
-                            <td class="py-2 pr-4 text-gray-700 font-mono text-xs">{{ $row['affiliate_id'] }}</td>
+                            <td class="py-2 pr-4 text-gray-700">
+                                @if(!empty($row['affiliate_label']))
+                                    <div>{{ $row['affiliate_label'] }}</div>
+                                @endif
+                                <div class="font-mono text-xs text-gray-500">{{ $row['affiliate_id'] }}</div>
+                            </td>
                             <td class="py-2 pr-4 text-right text-gray-400">{{ $row['previous_count'] }}</td>
                             <td class="py-2 pr-4 text-right text-gray-600">{{ $row['current_count'] }}</td>
                             <td class="py-2 pr-4 text-right text-gray-400">{{ fmt($row['previous_amount']) }}</td>
